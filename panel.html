@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Zarządzania Usterkami</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0f14; --surface:#141720; --surface2:#1c2030; --border:#252a3a;
+    --accent:#4f8ef7; --accent2:#7c5cfc; --danger:#f05252; --warn:#f59e0b; --ok:#22c55e;
+    --text:#e2e8f0; --muted:#64748b; --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif; --radius:6px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px}
+  .app{display:flex;height:100vh;overflow:hidden}
+  aside{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+  .logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-weight:600;font-size:13px;letter-spacing:.05em;color:var(--accent)}
+  .logo span{display:block;font-weight:300;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.1em}
+  nav{flex:1;padding:12px 0}
+  nav a{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13px;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:color .15s,background .15s,border-color .15s;cursor:pointer}
+  nav a:hover{color:var(--text);background:var(--surface2)}
+  nav a.active{color:var(--accent);border-left-color:var(--accent);background:rgba(79,142,247,.06)}
+  nav a .ico{width:16px;text-align:center;font-size:15px}
+  .user-bar{padding:14px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+  .user-bar strong{display:block;color:var(--text);font-weight:500}
+  main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{height:52px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+  .topbar h1{font-size:15px;font-weight:500}
+  .topbar .actions{display:flex;gap:8px}
+  .content{flex:1;overflow-y:auto;padding:24px}
+  .view{display:none}
+  .view.active{display:block}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+  .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+  .kpi .value{font-family:var(--mono);font-size:28px;font-weight:600}
+  .kpi.accent .value{color:var(--accent)}.kpi.warn .value{color:var(--warn)}.kpi.danger .value{color:var(--danger)}.kpi.ok .value{color:var(--ok)}
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .table-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .table-header h2{font-size:13px;font-weight:500}
+  table{width:100%;border-collapse:collapse}
+  th{padding:9px 14px;text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)}
+  td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:11px;font-weight:500;text-transform:uppercase}
+  .badge-NOWE{background:rgba(79,142,247,.15);color:var(--accent)}.badge-W_TOKU{background:rgba(124,92,252,.15);color:var(--accent2)}
+  .badge-OCZEKUJE{background:rgba(245,158,11,.15);color:var(--warn)}.badge-ROZWIAZANE{background:rgba(34,197,94,.15);color:var(--ok)}
+  .badge-ZAMKNIETE{background:rgba(100,116,139,.15);color:var(--muted)}.badge-ODRZUCONE{background:rgba(240,82,82,.15);color:var(--danger)}
+  .pilnosc-NATYCHMIASTOWA{color:var(--danger);font-weight:600}.pilnosc-WYSOKA{color:var(--warn)}.pilnosc-SREDNIA{color:var(--text)}.pilnosc-NISKA{color:var(--muted)}
+  .prior-bar{display:flex;align-items:center;gap:8px}
+  .prior-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .prior-num{font-family:var(--mono);font-size:12px}
+  .btn{padding:7px 14px;border-radius:var(--radius);border:none;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s}
+  .btn:hover{opacity:.85}
+  .btn-primary{background:var(--accent);color:#fff}.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+  .btn-ghost:hover{color:var(--text)}.btn-danger{background:rgba(240,82,82,.2);color:var(--danger);border:1px solid rgba(240,82,82,.3)}
+  .btn-ok{background:rgba(34,197,94,.2);color:var(--ok);border:1px solid rgba(34,197,94,.3)}.btn-sm{padding:4px 10px;font-size:12px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .form-full{grid-column:1/-1}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;color:var(--muted);font-weight:500}
+  .field input,.field select,.field textarea{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+  .field textarea{resize:vertical;min-height:80px}
+  .field select option{background:var(--surface2)}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+  .overlay.open{opacity:1;pointer-events:auto}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;width:560px;max-width:95vw;transform:translateY(12px);transition:transform .2s}
+  .overlay.open .modal{transform:translateY(0)}
+  .modal h3{font-size:15px;font-weight:500;margin-bottom:20px}
+  .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+  #toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:200}
+  .toast{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px;min-width:260px;animation:slideIn .2s ease;max-width:400px;word-break:break-word}
+  .toast.ok{border-left:3px solid var(--ok)}.toast.error{border-left:3px solid var(--danger)}.toast.warn{border-left:3px solid var(--warn)}
+  @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+  .filter-row{display:flex;gap:8px;align-items:center}
+  .filter-row select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:12px}
+  .help-text{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="logo">USTERKI.SYS <span>INFRASTRUKTURA v1.0</span></div>
+    <nav>
+      <a class="active" onclick="switchView('dashboard',this)"><span class="ico">◈</span> Dashboard</a>
+      <a onclick="switchView('zgloszenia',this)"><span class="ico">⊞</span> Zgłoszenia</a>
+      <a onclick="switchView('nowe',this)"><span class="ico">＋</span> Nowe zgłoszenie</a>
+      <a onclick="switchView('kolejka',this)"><span class="ico">↕</span> Kolejka (priorytet)</a>
+      <a onclick="switchView('przypisania',this)"><span class="ico">⊙</span> Przypisania</a>
+    </nav>
+    <div class="user-bar"><strong>Administrator</strong>Panel zarządzania</div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <h1 id="topbar-title">Dashboard</h1>
+      <div class="actions"><button class="btn btn-ghost btn-sm" onclick="odswiezWidok()">↻ Odśwież</button></div>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="view active" id="view-dashboard">
+        <div class="kpi-row">
+          <div class="kpi accent"><div class="label">Wszystkie aktywne</div><div class="value" id="kpi-total">—</div></div>
+          <div class="kpi danger"><div class="label">Krytyczne (P≤20)</div><div class="value" id="kpi-kryt">—</div></div>
+          <div class="kpi warn"><div class="label">Oczekujące</div><div class="value" id="kpi-ocz">—</div></div>
+          <div class="kpi ok"><div class="label">Rozwiązane</div><div class="value" id="kpi-ok">—</div></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header"><h2>Najnowsze zgłoszenia</h2><span style="font-size:11px;color:var(--muted)" id="last-refresh">—</span></div>
+          <table><thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Status</th><th>Pilność</th></tr></thead>
+          <tbody id="dash-tbody"><tr><td colspan="6" class="empty"><div class="spinner"></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- LISTA ZGŁOSZEŃ -->
+      <div class="view" id="view-zgloszenia">
+        <div class="table-wrap">
+          <div class="table-header"><h2>Wszystkie zgłoszenia</h2>
+            <div class="filter-row">
+              <select id="filter-status" onchange="renderZgloszenia()">
+                <option value="">Wszystkie statusy</option>
+                <option>NOWE</option><option>W_TOKU</option><option>OCZEKUJE</option>
+                <option>ROZWIAZANE</option><option>ZAMKNIETE</option><option>ODRZUCONE</option>
+              </select>
+            </div>
+          </div>
+          <table><thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Zgłaszający</th><th>Priorytet</th><th>Status</th><th>Akcje</th></tr></thead>
+          <tbody id="zgl-tbody"><tr><td colspan="7" class="empty"><div class="spinner"></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- NOWE ZGŁOSZENIE -->
+      <div class="view" id="view-nowe">
+        <div class="table-wrap" style="max-width:640px">
+          <div class="table-header"><h2>Utwórz nowe zgłoszenie</h2></div>
+          <div style="padding:24px">
+            <div class="form-grid">
+              <div class="field form-full">
+                <label>Tytuł zgłoszenia *</label>
+                <input type="text" id="n-tytul" placeholder="Krótki opis usterki">
+              </div>
+              <div class="field">
+                <label>Kategoria *</label>
+                <select id="n-kategoria"><option value="">Ładowanie…</option></select>
+              </div>
+              <div class="field">
+                <label>Pilność</label>
+                <select id="n-pilnosc">
+                  <option value="SREDNIA">Średnia</option>
+                  <option value="NISKA">Niska</option>
+                  <option value="WYSOKA">Wysoka</option>
+                  <option value="NATYCHMIASTOWA">Natychmiastowa</option>
+                </select>
+              </div>
+              <div class="field form-full">
+                <label>Opis</label>
+                <textarea id="n-opis" placeholder="Szczegółowy opis usterki…"></textarea>
+              </div>
+              <div class="field form-full">
+                <label>Adres / lokalizacja</label>
+                <input type="text" id="n-adres" placeholder="ul. Przykładowa 1, Miasto">
+              </div>
+              <div class="field">
+                <label>Termin realizacji</label>
+                <input type="date" id="n-termin-data" placeholder="rrrr-mm-dd">
+                <div class="help-text">Godzina zakończenia: <select id="n-termin-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select></div>
+              </div>
+              <div class="field">
+                <label>ID Zgłaszającego</label>
+                <input type="number" id="n-id-zglos" value="1" min="1">
+                <div class="help-text">Musi istnieć w tabeli uzytkownicy</div>
+              </div>
+            </div>
+            <div style="margin-top:20px;display:flex;gap:8px">
+              <button class="btn btn-primary" onclick="utworzZgloszenie()">Utwórz zgłoszenie</button>
+              <button class="btn btn-ghost" onclick="resetForm()">Wyczyść</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KOLEJKA PRIORYTETOWA -->
+      <div class="view" id="view-kolejka">
+        <div class="table-wrap">
+          <div class="table-header"><h2>Kolejka zgłoszeń (wg priorytetu)</h2><span style="font-size:11px;color:var(--muted)">Niższy numer = wyższy priorytet</span></div>
+          <table><thead><tr><th>#</th><th>Nr zgłoszenia</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Pilność</th><th>Termin</th><th>Status</th></tr></thead>
+          <tbody id="kol-tbody"><tr><td colspan="8" class="empty"><div class="spinner"></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- PRZYPISANIA -->
+      <div class="view" id="view-przypisania">
+        <div style="display:flex;gap:16px;margin-bottom:16px;align-items:flex-end">
+          <div class="field" style="min-width:200px">
+            <label>ID technika</label>
+            <input type="number" id="p-id-tech" value="1" min="1">
+          </div>
+          <button class="btn btn-primary" onclick="loadKolejkaTechnika()">Pobierz kolejkę</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header"><h2>Aktywne przypisania technika</h2></div>
+          <table><thead><tr><th>Nr zgłoszenia</th><th>Tytuł</th><th>Planowany start</th><th>Planowane zakończenie</th><th>Status</th><th>Akcje</th></tr></thead>
+          <tbody id="prz-tbody"><tr><td colspan="6" class="empty">Podaj ID technika i kliknij Pobierz.</td></tr></tbody></table>
+        </div>
+
+        <div class="table-wrap" style="margin-top:16px;max-width:520px">
+          <div class="table-header"><h2>Przypisz technika do zgłoszenia</h2></div>
+          <div style="padding:24px">
+            <div class="form-grid">
+              <div class="field">
+                <label>ID zgłoszenia *</label>
+                <input type="number" id="pa-zgl" min="1" placeholder="np. 1">
+              </div>
+              <div class="field">
+                <label>ID technika *</label>
+                <input type="number" id="pa-tech" min="1" placeholder="np. 2">
+                <div class="help-text">Musi mieć rolę TECHNIK</div>
+              </div>
+              <div class="field">
+                <label>ID przypisującego</label>
+                <input type="number" id="pa-przyp" value="1" min="1">
+              </div>
+              <div class="field">
+                <label>Planowany start</label>
+                <input type="date" id="pa-start-data">
+                <div class="help-text">Godzina: <select id="pa-start-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select></div>
+              </div>
+            </div>
+            <div style="margin-top:16px">
+              <button class="btn btn-primary" onclick="przypiszTechnika()">Przypisz technika</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal zmiana statusu -->
+<div class="overlay" id="modal-status">
+  <div class="modal">
+    <h3>Zmień status zgłoszenia</h3>
+    <input type="hidden" id="ms-id">
+    <div class="form-grid">
+      <div class="field form-full">
+        <label>Nowy status</label>
+        <select id="ms-status">
+          <option value="NOWE">NOWE</option><option value="W_TOKU">W_TOKU</option>
+          <option value="OCZEKUJE">OCZEKUJE</option><option value="ROZWIAZANE">ROZWIĄZANE</option>
+          <option value="ZAMKNIETE">ZAMKNIĘTE</option><option value="ODRZUCONE">ODRZUCONE</option>
+        </select>
+      </div>
+      <div class="field form-full">
+        <label>Komentarz</label>
+        <textarea id="ms-kom" placeholder="Opcjonalny komentarz…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-status')">Anuluj</button>
+      <button class="btn btn-primary" onclick="zapiszStatus()">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const API = 'http://localhost:8080/api';
+let zgloszenia = [];
+let currentView = 'dashboard';
+
+// ── Wypełnij selecty godzin ──────────────────────────────────
+function fillHourSelects() {
+  const opts = Array.from({length: 24}, (_, i) => {
+    const h = String(i).padStart(2, '0');
+    return `<option value="${h}:00">${h}:00</option>`;
+  }).join('');
+  document.getElementById('n-termin-godz').innerHTML = opts;
+  document.getElementById('pa-start-godz').innerHTML = opts;
+  document.getElementById('n-termin-godz').value = '08:00';
+  document.getElementById('pa-start-godz').value = '08:00';
+}
+fillHourSelects();
+
+// ── Nawigacja ────────────────────────────────────────────────
+function switchView(view, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  el.classList.add('active');
+  currentView = view;
+  const tytuly = {dashboard:'Dashboard', zgloszenia:'Wszystkie zgłoszenia', nowe:'Nowe zgłoszenie', kolejka:'Kolejka priorytetowa', przypisania:'Przypisania techników'};
+  document.getElementById('topbar-title').textContent = tytuly[view] || view;
+  odswiezWidok();
+}
+
+function odswiezWidok() {
+  if (currentView === 'dashboard')  loadDashboard();
+  if (currentView === 'zgloszenia') loadZgloszenia();
+  if (currentView === 'kolejka')    loadKolejka();
+  if (currentView === 'nowe')       loadKategorie();
+}
+
+// ── API helper ───────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+  const r = await fetch(API + url, { headers: {'Content-Type':'application/json'}, ...opts });
+  const text = await r.text();
+  if (!r.ok) {
+    // Pokaż dokładny komunikat z serwera
+    throw new Error(text || r.statusText);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+// ── Dashboard ────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const data = await apiFetch('/zgloszenia');
+    zgloszenia = data;
+    document.getElementById('kpi-total').textContent = data.length;
+    document.getElementById('kpi-kryt').textContent  = data.filter(z => z.efektywnyPriorytet <= 20).length;
+    document.getElementById('kpi-ocz').textContent   = data.filter(z => z.status === 'OCZEKUJE').length;
+    document.getElementById('kpi-ok').textContent    = data.filter(z => z.status === 'ROZWIAZANE').length;
+    document.getElementById('last-refresh').textContent = 'Ostatnia aktualizacja: ' + new Date().toLocaleTimeString('pl');
+    const tbody = document.getElementById('dash-tbody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Brak aktywnych zgłoszeń</td></tr>'; return; }
+    tbody.innerHTML = data.slice(0,10).map(z => `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
+      <td>${z.tytul}</td><td style="color:var(--muted)">${z.kategoria}</td>
+      <td>${priorBadge(z.efektywnyPriorytet)}</td>
+      <td><span class="badge badge-${z.status}">${z.status}</span></td>
+      <td><span class="pilnosc-${z.pilnosc}">${z.pilnosc}</span></td>
+    </tr>`).join('');
+  } catch(e) { toast('Błąd ładowania: ' + e.message, 'error'); }
+}
+
+// ── Lista zgłoszeń ───────────────────────────────────────────
+async function loadZgloszenia() {
+  try { zgloszenia = await apiFetch('/zgloszenia'); renderZgloszenia(); }
+  catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+function renderZgloszenia() {
+  const filter = document.getElementById('filter-status').value;
+  const data   = filter ? zgloszenia.filter(z => z.status === filter) : zgloszenia;
+  const tbody  = document.getElementById('zgl-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Brak wyników</td></tr>'; return; }
+  tbody.innerHTML = data.map(z => `<tr>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
+    <td>${z.tytul}</td><td style="color:var(--muted)">${z.kategoria}</td>
+    <td style="color:var(--muted)">${z.zglaszajacy}</td>
+    <td>${priorBadge(z.efektywnyPriorytet)}</td>
+    <td><span class="badge badge-${z.status}">${z.status}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openModalStatus(${z.id})">Status</button></td>
+  </tr>`).join('');
+}
+
+// ── Kolejka ──────────────────────────────────────────────────
+async function loadKolejka() {
+  try {
+    const data   = await apiFetch('/zgloszenia');
+    const sorted = [...data].sort((a,b) => a.efektywnyPriorytet - b.efektywnyPriorytet);
+    const tbody  = document.getElementById('kol-tbody');
+    if (!sorted.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Kolejka pusta</td></tr>'; return; }
+    tbody.innerHTML = sorted.map((z,i) => `<tr>
+      <td style="font-family:var(--mono);color:var(--muted)">${i+1}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
+      <td>${z.tytul}</td><td style="color:var(--muted)">${z.kategoria}</td>
+      <td>${priorBadge(z.efektywnyPriorytet)}</td>
+      <td><span class="pilnosc-${z.pilnosc}">${z.pilnosc}</span></td>
+      <td style="color:var(--muted);font-size:12px">${z.terminRealizacji ? new Date(z.terminRealizacji).toLocaleString('pl') : '—'}</td>
+      <td><span class="badge badge-${z.status}">${z.status}</span></td>
+    </tr>`).join('');
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+// ── Kategorie ────────────────────────────────────────────────
+async function loadKategorie() {
+  try {
+    const data = await apiFetch('/kategorie');
+    const sel  = document.getElementById('n-kategoria');
+    if (!data.length) { sel.innerHTML = '<option value="">Brak kategorii w bazie</option>'; return; }
+    sel.innerHTML = data.map(k => `<option value="${k.id}">${k.nazwa}</option>`).join('');
+  } catch(e) { toast('Błąd ładowania kategorii: ' + e.message, 'error'); }
+}
+
+// ── Nowe zgłoszenie ──────────────────────────────────────────
+async function utworzZgloszenie() {
+  const tytul = document.getElementById('n-tytul').value.trim();
+  const idKat = document.getElementById('n-kategoria').value;
+  const idZgl = document.getElementById('n-id-zglos').value;
+  if (!tytul)  { toast('Podaj tytuł zgłoszenia', 'warn'); return; }
+  if (!idKat)  { toast('Wybierz kategorię', 'warn'); return; }
+  if (!idZgl)  { toast('Podaj ID zgłaszającego', 'warn'); return; }
+
+  const terminData = document.getElementById('n-termin-data').value;
+  const terminGodz = document.getElementById('n-termin-godz').value;
+  const termin     = terminData ? terminData + 'T' + terminGodz + ':00' : null;
+
+  const body = {
+    idKategorii:      parseInt(idKat),
+    tytul,
+    opis:             document.getElementById('n-opis').value,
+    pilnosc:          document.getElementById('n-pilnosc').value,
+    adres:            document.getElementById('n-adres').value,
+    terminRealizacji: termin,
+  };
+
+  try {
+    const wynik = await apiFetch(`/zgloszenia/${idZgl}`, { method: 'POST', body: JSON.stringify(body) });
+    toast('Zgłoszenie ' + wynik.numerZgloszenia + ' zostało utworzone', 'ok');
+    resetForm();
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+function resetForm() {
+  ['n-tytul','n-opis','n-adres','n-termin-data'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('n-pilnosc').value    = 'SREDNIA';
+  document.getElementById('n-termin-godz').value = '08:00';
+}
+
+// ── Przypisania ──────────────────────────────────────────────
+async function loadKolejkaTechnika() {
+  const id = document.getElementById('p-id-tech').value;
+  if (!id) { toast('Podaj ID technika', 'warn'); return; }
+  try {
+    const data  = await apiFetch(`/przypisania/technik/${id}`);
+    const tbody = document.getElementById('prz-tbody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Brak aktywnych przypisań</td></tr>'; return; }
+    tbody.innerHTML = data.map(p => `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${p.numerZgloszenia}</td>
+      <td>${p.tytul}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(p.planowanyStart)}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(p.planowaneZakonczenie)}</td>
+      <td><span class="badge badge-W_TOKU">${p.status}</span></td>
+      <td>
+        <button class="btn btn-ok btn-sm" onclick="zakonczPrzypisanie(${p.id})">Zakończ</button>
+        <button class="btn btn-danger btn-sm" onclick="anulujPrzypisanie(${p.id})">Anuluj</button>
+      </td>
+    </tr>`).join('');
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+async function przypiszTechnika() {
+  const idZgl   = document.getElementById('pa-zgl').value;
+  const idTech  = document.getElementById('pa-tech').value;
+  const idPrzyp = document.getElementById('pa-przyp').value;
+  if (!idZgl)  { toast('Podaj ID zgłoszenia', 'warn'); return; }
+  if (!idTech) { toast('Podaj ID technika', 'warn'); return; }
+
+  const startData = document.getElementById('pa-start-data').value;
+  const startGodz = document.getElementById('pa-start-godz').value;
+  const start     = startData ? startData + 'T' + startGodz + ':00' : null;
+
+  const body = {
+    idTechnika:       parseInt(idTech),
+    idPrzypisujacego: parseInt(idPrzyp),
+    planowanyStart:   start,
+  };
+
+  try {
+    await apiFetch(`/przypisania/${idZgl}`, { method: 'POST', body: JSON.stringify(body) });
+    toast('Technik przypisany pomyślnie', 'ok');
+    loadKolejkaTechnika();
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+async function zakonczPrzypisanie(id) {
+  try { await apiFetch(`/przypisania/${id}/zakoncz`, {method:'PUT'}); toast('Przypisanie zakończone','ok'); loadKolejkaTechnika(); }
+  catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+async function anulujPrzypisanie(id) {
+  try { await apiFetch(`/przypisania/${id}/anuluj`, {method:'PUT'}); toast('Przypisanie anulowane','warn'); loadKolejkaTechnika(); }
+  catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+// ── Modal status ─────────────────────────────────────────────
+function openModalStatus(id) { document.getElementById('ms-id').value = id; document.getElementById('modal-status').classList.add('open'); }
+function closeModal(id)       { document.getElementById(id).classList.remove('open'); }
+
+async function zapiszStatus() {
+  const id  = document.getElementById('ms-id').value;
+  const st  = document.getElementById('ms-status').value;
+  const kom = document.getElementById('ms-kom').value;
+  try {
+    await apiFetch(`/zgloszenia/${id}/status`, {method:'PUT', body:JSON.stringify({nowyStatus:st, idUzytkownika:1, komentarz:kom})});
+    toast('Status zaktualizowany', 'ok');
+    closeModal('modal-status');
+    loadZgloszenia();
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function priorBadge(p) {
+  const c = p<=20?'var(--danger)':p<=40?'var(--warn)':p<=60?'var(--accent)':'var(--muted)';
+  return `<div class="prior-bar"><div class="prior-dot" style="background:${c}"></div><span class="prior-num" style="color:${c}">${p}</span></div>`;
+}
+function fmtDate(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleString('pl',{dateStyle:'short',timeStyle:'short'});
+}
+function toast(msg, type='ok') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+loadDashboard();
+loadKategorie();
+</script>
+</body>
+</html>
