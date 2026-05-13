@@ -2,37 +2,45 @@ package com.usterki.controller;
 
 import com.usterki.dto.PrzypisanieDto;
 import com.usterki.model.PrzypisanieTechnika;
+import com.usterki.model.Uzytkownik;
 import com.usterki.service.PrzypisanieService;
+import com.usterki.service.UzytkownikService;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/przypisania")
-@CrossOrigin(origins = "*")
 public class PrzypisanieController {
 
     private final PrzypisanieService przypisanieService;
+    private final UzytkownikService uzytkownikService;
 
-    public PrzypisanieController(PrzypisanieService przypisanieService) {
+    public PrzypisanieController(PrzypisanieService przypisanieService,
+                                  UzytkownikService uzytkownikService) {
         this.przypisanieService = przypisanieService;
+        this.uzytkownikService = uzytkownikService;
     }
 
     @GetMapping("/technik/{idTechnika}")
-    public ResponseEntity<List<PrzypisanieDto.Odpowiedz>> kolejkaTechnika(@PathVariable Long idTechnika) {
-        List<PrzypisanieDto.Odpowiedz> lista = przypisanieService.kolejkaTechnika(idTechnika)
-                .stream().map(PrzypisanieDto.Odpowiedz::z).toList();
-        return ResponseEntity.ok(lista);
+    public ResponseEntity<List<PrzypisanieDto.Odpowiedz>> kolejkaTechnika(
+            @PathVariable Long idTechnika) {
+        return ResponseEntity.ok(
+                przypisanieService.kolejkaTechnika(idTechnika)
+                        .stream().map(PrzypisanieDto.Odpowiedz::z).toList());
     }
 
     @PostMapping("/{idZgloszenia}")
     public ResponseEntity<PrzypisanieDto.Odpowiedz> przypisz(@PathVariable Long idZgloszenia,
-                                                               @RequestBody PrzypisanieDto.Zapis dto) {
+                                                               @RequestBody PrzypisanieDto.Zapis dto,
+                                                               Authentication authentication) {
+        Uzytkownik przypisujacy = uzytkownikService.pobierzPrzezLogin(authentication.getName());
         PrzypisanieTechnika p = przypisanieService.przypisz(
-                idZgloszenia, dto.getIdTechnika(), dto.getIdPrzypisujacego(), dto.getPlanowanyStart());
+                idZgloszenia, dto.getIdTechnika(), przypisujacy.getId(), dto.getPlanowanyStart());
         return ResponseEntity.status(HttpStatus.CREATED).body(PrzypisanieDto.Odpowiedz.z(p));
     }
 
