@@ -3,13 +3,15 @@ package com.usterki.service;
 import com.usterki.model.*;
 import com.usterki.model.Zgloszenie.Status;
 import com.usterki.repository.*;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class ZgloszenieService {
@@ -95,8 +97,83 @@ public class ZgloszenieService {
     }
 
     @Transactional(readOnly = true)
+    public Zgloszenie pobierzZgloszeniePoId(Long id) {
+        return zgloszenieRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono zgłoszenia: " + id));
+    }
+
+    @Transactional(readOnly = true)
     public List<Zgloszenie> pobierzZgloszeniaUzytkownika(Long idUzytkownika) {
         return zgloszenieRepo.findByZglaszajacyId(idUzytkownika);
+    }
+
+    /** Filtrowanie po statusie, kategorii, tekście (tytuł/opis/adres) i zakresie dat. */
+    @Transactional(readOnly = true)
+    public List<Zgloszenie> filtruj(String status, Long idKategorii,
+                                    String szukaj, LocalDate od, LocalDate dataDo) {
+        return zgloszenieRepo.findAll((root, query, cb) -> {
+            List<Predicate> preds = new ArrayList<>();
+
+            if (status != null && !status.isBlank()) {
+                try {
+                    preds.add(cb.equal(root.get("status"), Status.valueOf(status)));
+                } catch (IllegalArgumentException ignored) { /* nieznany status → ignoruj */ }
+            }
+            if (idKategorii != null) {
+                preds.add(cb.equal(root.get("kategoria").get("id"), idKategorii));
+            }
+            if (szukaj != null && !szukaj.isBlank()) {
+                String like = "%" + szukaj.toLowerCase() + "%";
+                preds.add(cb.or(
+                    cb.like(cb.lower(root.get("tytul")), like),
+                    cb.like(cb.lower(root.get("opis")), like),
+                    cb.like(cb.lower(root.get("adres")), like)
+                ));
+            }
+            if (od != null) {
+                preds.add(cb.greaterThanOrEqualTo(root.get("utworzono"), od.atStartOfDay()));
+            }
+            if (dataDo != null) {
+                preds.add(cb.lessThan(root.get("utworzono"), dataDo.plusDays(1).atStartOfDay()));
+            }
+
+            query.orderBy(cb.asc(root.get("priorytetObliczony")));
+            return cb.and(preds.toArray(new Predicate[0]));
+        });
+    }
+
+    /** Agregaty do widoku statystyk. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> pobierzStatystyki() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+
+        // Liczba wg statusu
+        Map<String, Long> porStatus = new LinkedHashMap<>();
+        zgloszenieRepo.groupByStatus()
+                .forEach(row -> porStatus.put(row[0].toString(), (Long) row[1]));
+        stats.put("porStatus", porStatus);
+
+        // Liczba wg kategorii (wszystkie)
+        List<Map<String, Object>> porKat = new ArrayList<>();
+        zgloszenieRepo.groupByKategoria().forEach(row -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("nazwa", row[0]);
+            m.put("liczba", row[1]);
+            porKat.add(m);
+        });
+        stats.put("porKategoria", porKat);
+
+        // Średni czas realizacji
+        stats.put("srCzasRealizacjiGodz", zgloszenieRepo.avgCzasRealizacjiGodz());
+
+        // Liczniki czasowe
+        LocalDateTime now = LocalDateTime.now();
+        stats.put("dzisiaj",    zgloszenieRepo.countOd(now.toLocalDate().atStartOfDay()));
+        stats.put("tenTydzien", zgloszenieRepo.countOd(now.minusDays(7)));
+        stats.put("tenMiesiac", zgloszenieRepo.countOd(now.minusDays(30)));
+        stats.put("lacznie",    zgloszenieRepo.count());
+
+        return stats;
     }
 
     @Scheduled(fixedRate = 3_600_000)

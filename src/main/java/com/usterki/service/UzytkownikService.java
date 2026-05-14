@@ -66,4 +66,23 @@ public class UzytkownikService implements UserDetailsService {
     public List<Uzytkownik> pobierzTechnikow() {
         return uzytkownikRepository.findByRolaAndAktywny(Uzytkownik.Rola.TECHNIK, true);
     }
+
+    @Transactional
+    public Uzytkownik zarejestruj(String login, String email, String imie,
+                                   String nazwisko, String haslo, String telefon) {
+        if (uzytkownikRepository.findByLogin(login).isPresent())
+            throw new IllegalStateException("Login jest już zajęty: " + login);
+        if (uzytkownikRepository.findByEmail(email).isPresent())
+            throw new IllegalStateException("Adres e-mail jest już używany");
+
+        Uzytkownik u = new Uzytkownik();
+        u.setLogin(login);
+        u.setEmail(email);
+        u.setImie(imie);
+        u.setNazwisko(nazwisko);
+        u.setHasloHash(passwordEncoder.encode(haslo));
+        u.setTelefon(telefon);
+        u.setRola(Uzytkownik.Rola.ZGLASZAJACY);
+        return uzytkownikRepository.save(u);
+    }
 }

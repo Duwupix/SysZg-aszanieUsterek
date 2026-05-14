@@ -5,11 +5,13 @@ import com.usterki.model.Uzytkownik;
 import com.usterki.model.Zgloszenie;
 import com.usterki.service.UzytkownikService;
 import com.usterki.service.ZgloszenieService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -25,10 +27,42 @@ public class ZgloszenieController {
         this.uzytkownikService = uzytkownikService;
     }
 
+    /**
+     * Lista zgłoszeń z opcjonalnym filtrowaniem po stronie serwera.
+     * Bez parametrów: kolejka aktywnych zgłoszeń (bez ZAMKNIETE/ODRZUCONE).
+     * Z parametrami: pełne wyszukiwanie wg statusu, kategorii, tekstu, dat.
+     */
     @GetMapping
-    public ResponseEntity<List<ZgloszenieDto.Odpowiedz>> pobierzKolejke() {
+    public ResponseEntity<List<ZgloszenieDto.Odpowiedz>> pobierz(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long idKategorii,
+            @RequestParam(required = false) String szukaj,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate od,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataDo) {
+
+        List<Zgloszenie> wynik;
+        if (status != null || idKategorii != null || szukaj != null || od != null || dataDo != null) {
+            wynik = zgloszenieService.filtruj(status, idKategorii, szukaj, od, dataDo);
+        } else {
+            wynik = zgloszenieService.pobierzKolejke();
+        }
+        return ResponseEntity.ok(wynik.stream().map(ZgloszenieDto.Odpowiedz::z).toList());
+    }
+
+    /** Szczegóły pojedynczego zgłoszenia. */
+    @GetMapping("/{id}")
+    public ResponseEntity<ZgloszenieDto.Odpowiedz> pobierzJedno(@PathVariable Long id) {
+        return ResponseEntity.ok(ZgloszenieDto.Odpowiedz.z(
+                zgloszenieService.pobierzZgloszeniePoId(id)));
+    }
+
+    /** Zgłoszenia zalogowanego użytkownika. */
+    @GetMapping("/moje")
+    public ResponseEntity<List<ZgloszenieDto.Odpowiedz>> moje(Authentication authentication) {
+        Uzytkownik u = uzytkownikService.pobierzPrzezLogin(authentication.getName());
         return ResponseEntity.ok(
-                zgloszenieService.pobierzKolejke().stream().map(ZgloszenieDto.Odpowiedz::z).toList());
+                zgloszenieService.pobierzZgloszeniaUzytkownika(u.getId())
+                        .stream().map(ZgloszenieDto.Odpowiedz::z).toList());
     }
 
     @GetMapping("/uzytkownik/{idUzytkownika}")

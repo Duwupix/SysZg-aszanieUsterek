@@ -43,6 +43,8 @@ public class ZgloszenieDto {
         private String adres;
         private LocalDateTime terminRealizacji;
         private LocalDateTime utworzono;
+        private LocalDateTime zamknieto;
+        private Long idKategorii;
         private String kategoria;
         private String zglaszajacy;
 
@@ -58,6 +60,8 @@ public class ZgloszenieDto {
             o.adres              = z.getAdres();
             o.terminRealizacji   = z.getTerminRealizacji();
             o.utworzono          = z.getUtworzono();
+            o.zamknieto          = z.getZamknieto();
+            o.idKategorii        = z.getKategoria().getId();
             o.kategoria          = z.getKategoria().getNazwa();
             o.zglaszajacy        = z.getZglaszajacy().pelneNazwisko();
             return o;
@@ -73,6 +77,8 @@ public class ZgloszenieDto {
         public String getAdres() { return adres; }
         public LocalDateTime getTerminRealizacji() { return terminRealizacji; }
         public LocalDateTime getUtworzono() { return utworzono; }
+        public LocalDateTime getZamknieto() { return zamknieto; }
+        public Long getIdKategorii() { return idKategorii; }
         public String getKategoria() { return kategoria; }
         public String getZglaszajacy() { return zglaszajacy; }
     }

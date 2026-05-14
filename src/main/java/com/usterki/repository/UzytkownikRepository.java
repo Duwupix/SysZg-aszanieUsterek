@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface UzytkownikRepository extends JpaRepository<Uzytkownik, Long> {
     Optional<Uzytkownik> findByLogin(String login);
+    Optional<Uzytkownik> findByEmail(String email);
     List<Uzytkownik> findByRola(Uzytkownik.Rola rola);
     List<Uzytkownik> findByRolaAndAktywny(Uzytkownik.Rola rola, boolean aktywny);
 }

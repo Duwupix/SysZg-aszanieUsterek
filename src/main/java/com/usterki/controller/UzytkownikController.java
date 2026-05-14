@@ -48,6 +48,28 @@ public class UzytkownikController {
         }
     }
 
+    @PostMapping("/auth/rejestracja")
+    public ResponseEntity<?> rejestracja(@RequestBody Map<String, String> body) {
+        String login    = body.getOrDefault("login", "").trim();
+        String email    = body.getOrDefault("email", "").trim();
+        String imie     = body.getOrDefault("imie", "").trim();
+        String nazwisko = body.getOrDefault("nazwisko", "").trim();
+        String haslo    = body.getOrDefault("haslo", "");
+        String telefon  = body.get("telefon");
+
+        if (login.isBlank() || email.isBlank() || imie.isBlank() || nazwisko.isBlank() || haslo.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "Wszystkie wymagane pola muszą być wypełnione"));
+        if (haslo.length() < 6)
+            return ResponseEntity.badRequest().body(Map.of("error", "Hasło musi mieć co najmniej 6 znaków"));
+
+        try {
+            Uzytkownik u = uzytkownikService.zarejestruj(login, email, imie, nazwisko, haslo, telefon);
+            return ResponseEntity.status(201).body(toMap(u));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/auth/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);

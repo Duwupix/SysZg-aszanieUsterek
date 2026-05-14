@@ -15,9 +15,10 @@
   html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px}
 
   /* ── Login screen ─────────────────────────────────────────── */
-  .login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500}
+  .login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500;overflow-y:auto;padding:20px 0}
   .login-screen.hidden{display:none}
-  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:32px;width:360px}
+  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:32px;width:380px;transition:width .2s}
+  .login-box.wide{width:460px}
   .login-logo{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--accent);margin-bottom:8px}
   .login-logo span{display:block;font-weight:300;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.1em}
   .login-hint{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--muted);line-height:1.6}
@@ -60,7 +61,7 @@
 
   /* ── Table ───────────────────────────────────────────────── */
   .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-  .table-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .table-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
   .table-header h2{font-size:13px;font-weight:500}
   table{width:100%;border-collapse:collapse}
   th{padding:9px 14px;text-align:left;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)}
@@ -101,6 +102,13 @@
   .field select option{background:var(--surface2)}
   .help-text{font-size:11px;color:var(--muted);margin-top:2px}
 
+  /* ── Filter row ──────────────────────────────────────────── */
+  .filter-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .filter-bar input,.filter-bar select{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;color:var(--text);font-size:12px;outline:none;transition:border-color .15s}
+  .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
+  .filter-bar input[type=text]{min-width:200px}
+  .filter-bar input[type=date]{width:130px}
+
   /* ── Modal ───────────────────────────────────────────────── */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
   .overlay.open{opacity:1;pointer-events:auto}
@@ -119,8 +127,12 @@
   .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
-  .filter-row{display:flex;gap:8px;align-items:center}
-  .filter-row select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:12px}
+
+  /* ── Progress bar (statystyki) ───────────────────────────── */
+  .prog-wrap{display:flex;align-items:center;gap:8px;min-width:120px}
+  .prog-bg{flex:1;background:var(--surface2);border-radius:3px;height:6px}
+  .prog-fill{background:var(--accent);border-radius:3px;height:6px;transition:width .4s}
+  .prog-pct{font-size:11px;color:var(--muted);width:32px;text-align:right;font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -129,27 +141,77 @@
 <!--  LOGIN SCREEN                                               -->
 <!-- ═══════════════════════════════════════════════════════════ -->
 <div id="login-screen" class="login-screen">
-  <div class="login-box">
+  <div class="login-box" id="login-box">
     <div class="login-logo">USTERKI.SYS <span>INFRASTRUKTURA v1.0</span></div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Zaloguj się, aby kontynuować</p>
-    <div class="login-hint">
-      <strong>Konta testowe:</strong><br>
-      admin / admin123 — Administrator<br>
-      technik1…5 / technik123 — Technik<br>
-      jan.kowalski / user123 — Zgłaszający
+
+    <!-- === FORMULARZ LOGOWANIA === -->
+    <div id="login-form-block">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Zaloguj się, aby kontynuować</p>
+      <div class="login-hint">
+        <strong>Konta testowe:</strong><br>
+        admin / admin123 — Administrator<br>
+        technik1…5 / technik123 — Technik<br>
+        jan.kowalski / user123 — Zgłaszający
+      </div>
+      <div class="field">
+        <label>Login</label>
+        <input type="text" id="l-login" placeholder="Wpisz login" autocomplete="username"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Hasło</label>
+        <input type="password" id="l-haslo" placeholder="Wpisz hasło" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
+      <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="doLogin()">Zaloguj się</button>
+      <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">
+        Nie masz konta?
+        <a href="#" onclick="toggleRejestracja(event)" style="color:var(--accent);text-decoration:none">Zarejestruj się</a>
+      </p>
     </div>
-    <div class="field">
-      <label>Login</label>
-      <input type="text" id="l-login" placeholder="Wpisz login" autocomplete="username"
-             onkeydown="if(event.key==='Enter') doLogin()">
+
+    <!-- === FORMULARZ REJESTRACJI === -->
+    <div id="reg-form-block" style="display:none">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+        Nowe konto — rola: <strong style="color:var(--ok)">Zgłaszający</strong>
+      </p>
+      <div class="form-grid" style="gap:12px">
+        <div class="field">
+          <label>Imię *</label>
+          <input type="text" id="r-imie" placeholder="Jan">
+        </div>
+        <div class="field">
+          <label>Nazwisko *</label>
+          <input type="text" id="r-nazwisko" placeholder="Kowalski">
+        </div>
+        <div class="field form-full">
+          <label>Login *</label>
+          <input type="text" id="r-login" placeholder="jan.kowalski" autocomplete="username">
+        </div>
+        <div class="field form-full">
+          <label>Email *</label>
+          <input type="email" id="r-email" placeholder="jan@example.pl" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Hasło * (min. 6 znaków)</label>
+          <input type="password" id="r-haslo" placeholder="••••••" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label>Powtórz hasło *</label>
+          <input type="password" id="r-haslo2" placeholder="••••••" autocomplete="new-password">
+        </div>
+        <div class="field form-full">
+          <label>Telefon (opcjonalnie)</label>
+          <input type="text" id="r-telefon" placeholder="+48 123 456 789">
+        </div>
+      </div>
+      <div id="reg-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary" style="flex:1" onclick="doRejestracja()">Zarejestruj się</button>
+        <button class="btn btn-ghost" onclick="toggleRejestracja(null)">Anuluj</button>
+      </div>
     </div>
-    <div class="field" style="margin-top:12px">
-      <label>Hasło</label>
-      <input type="password" id="l-haslo" placeholder="Wpisz hasło" autocomplete="current-password"
-             onkeydown="if(event.key==='Enter') doLogin()">
-    </div>
-    <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
-    <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="doLogin()">Zaloguj się</button>
   </div>
 </div>
 
@@ -165,6 +227,7 @@
       <a onclick="switchView('nowe',this)"><span class="ico">＋</span> Nowe zgłoszenie</a>
       <a onclick="switchView('kolejka',this)"><span class="ico">↕</span> Kolejka (priorytet)</a>
       <a onclick="switchView('przypisania',this)"><span class="ico">⊙</span> Przypisania</a>
+      <a onclick="switchView('statystyki',this)"><span class="ico">◎</span> Statystyki</a>
       <a class="admin-only" id="nav-admin" onclick="switchView('uzytkownicy',this)"><span class="ico">⊛</span> Użytkownicy</a>
     </nav>
     <div class="user-bar">
@@ -178,11 +241,14 @@
   <main>
     <div class="topbar">
       <h1 id="topbar-title">Dashboard</h1>
-      <div class="actions"><button class="btn btn-ghost btn-sm" onclick="odswiezWidok()">↻ Odśwież</button></div>
+      <div class="actions">
+        <button class="btn btn-ghost btn-sm" onclick="odswiezWidok()">↻ Odśwież</button>
+        <button class="btn btn-danger btn-sm" onclick="doLogout()">⏻ Wyloguj</button>
+      </div>
     </div>
     <div class="content">
 
-      <!-- DASHBOARD -->
+      <!-- ─── DASHBOARD ──────────────────────────────────────── -->
       <div class="view active" id="view-dashboard">
         <div class="kpi-row">
           <div class="kpi accent"><div class="label">Wszystkie aktywne</div><div class="value" id="kpi-total">—</div></div>
@@ -191,30 +257,44 @@
           <div class="kpi ok"><div class="label">Rozwiązane</div><div class="value" id="kpi-ok">—</div></div>
         </div>
         <div class="table-wrap">
-          <div class="table-header"><h2>Najnowsze zgłoszenia</h2><span style="font-size:11px;color:var(--muted)" id="last-refresh">—</span></div>
+          <div class="table-header">
+            <h2>Najnowsze zgłoszenia</h2>
+            <span style="font-size:11px;color:var(--muted)" id="last-refresh">—</span>
+          </div>
           <table><thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Status</th><th>Pilność</th></tr></thead>
           <tbody id="dash-tbody"><tr><td colspan="6" class="empty"><div class="spinner"></div></td></tr></tbody></table>
         </div>
       </div>
 
-      <!-- LISTA ZGŁOSZEŃ -->
+      <!-- ─── LISTA ZGŁOSZEŃ ─────────────────────────────────── -->
       <div class="view" id="view-zgloszenia">
         <div class="table-wrap">
-          <div class="table-header"><h2>Wszystkie zgłoszenia</h2>
-            <div class="filter-row">
-              <select id="filter-status" onchange="renderZgloszenia()">
-                <option value="">Wszystkie statusy</option>
-                <option>NOWE</option><option>W_TOKU</option><option>OCZEKUJE</option>
-                <option>ROZWIAZANE</option><option>ZAMKNIETE</option><option>ODRZUCONE</option>
-              </select>
-            </div>
+          <div class="table-header"><h2>Wszystkie zgłoszenia</h2></div>
+          <!-- Pasek filtrów -->
+          <div class="filter-bar">
+            <input type="text" id="filter-szukaj" placeholder="🔍 Szukaj tytuł / opis / adres…"
+                   onkeydown="if(event.key==='Enter')szukajZgloszenia()">
+            <select id="filter-status">
+              <option value="">Wszystkie statusy</option>
+              <option>NOWE</option><option>W_TOKU</option><option>OCZEKUJE</option>
+              <option>ROZWIAZANE</option><option>ZAMKNIETE</option><option>ODRZUCONE</option>
+            </select>
+            <select id="filter-kategoria">
+              <option value="">Wszystkie kategorie</option>
+            </select>
+            <input type="date" id="filter-od" title="Data od">
+            <input type="date" id="filter-do" title="Data do">
+            <button class="btn btn-primary btn-sm" onclick="szukajZgloszenia()">Szukaj</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetFiltrow()">Reset</button>
           </div>
-          <table><thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Zgłaszający</th><th>Priorytet</th><th>Status</th><th>Akcje</th></tr></thead>
-          <tbody id="zgl-tbody"><tr><td colspan="7" class="empty"><div class="spinner"></div></td></tr></tbody></table>
+          <table>
+            <thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Zgłaszający</th><th>Priorytet</th><th>Status</th><th>Data</th><th>Akcje</th></tr></thead>
+            <tbody id="zgl-tbody"><tr><td colspan="8" class="empty"><div class="spinner"></div></td></tr></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- NOWE ZGŁOSZENIE -->
+      <!-- ─── NOWE ZGŁOSZENIE ────────────────────────────────── -->
       <div class="view" id="view-nowe">
         <div class="table-wrap" style="max-width:640px">
           <div class="table-header"><h2>Utwórz nowe zgłoszenie</h2></div>
@@ -248,7 +328,9 @@
               <div class="field">
                 <label>Termin realizacji</label>
                 <input type="date" id="n-termin-data">
-                <div class="help-text">Godzina: <select id="n-termin-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select></div>
+                <div class="help-text">Godzina:
+                  <select id="n-termin-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select>
+                </div>
               </div>
             </div>
             <div style="margin-top:20px;display:flex;gap:8px">
@@ -259,16 +341,19 @@
         </div>
       </div>
 
-      <!-- KOLEJKA PRIORYTETOWA -->
+      <!-- ─── KOLEJKA PRIORYTETOWA ───────────────────────────── -->
       <div class="view" id="view-kolejka">
         <div class="table-wrap">
-          <div class="table-header"><h2>Kolejka zgłoszeń (wg priorytetu)</h2><span style="font-size:11px;color:var(--muted)">Niższy numer = wyższy priorytet</span></div>
+          <div class="table-header">
+            <h2>Kolejka zgłoszeń (wg priorytetu)</h2>
+            <span style="font-size:11px;color:var(--muted)">Niższy numer = wyższy priorytet</span>
+          </div>
           <table><thead><tr><th>#</th><th>Nr zgłoszenia</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Pilność</th><th>Termin</th><th>Status</th></tr></thead>
           <tbody id="kol-tbody"><tr><td colspan="8" class="empty"><div class="spinner"></div></td></tr></tbody></table>
         </div>
       </div>
 
-      <!-- PRZYPISANIA -->
+      <!-- ─── PRZYPISANIA ────────────────────────────────────── -->
       <div class="view" id="view-przypisania">
         <div style="display:flex;gap:16px;margin-bottom:16px;align-items:flex-end">
           <div class="field" style="min-width:220px">
@@ -298,7 +383,9 @@
               <div class="field">
                 <label>Planowany start</label>
                 <input type="date" id="pa-start-data">
-                <div class="help-text">Godzina: <select id="pa-start-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select></div>
+                <div class="help-text">Godzina:
+                  <select id="pa-start-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select>
+                </div>
               </div>
             </div>
             <div style="margin-top:16px">
@@ -308,7 +395,40 @@
         </div>
       </div>
 
-      <!-- UŻYTKOWNICY (tylko admin) -->
+      <!-- ─── STATYSTYKI ─────────────────────────────────────── -->
+      <div class="view" id="view-statystyki">
+        <div class="kpi-row" id="st-kpi-row">
+          <div class="kpi accent"><div class="label">Łącznie</div><div class="value" id="st-total">—</div></div>
+          <div class="kpi accent"><div class="label">Ten miesiąc (30 dni)</div><div class="value" id="st-miesiac">—</div></div>
+          <div class="kpi warn"><div class="label">Ten tydzień</div><div class="value" id="st-tydzien">—</div></div>
+          <div class="kpi ok"><div class="label">Dzisiaj</div><div class="value" id="st-dzisiaj">—</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="table-wrap">
+            <div class="table-header"><h2>Rozkład wg statusu</h2></div>
+            <table>
+              <thead><tr><th>Status</th><th>Liczba</th><th>Udział</th></tr></thead>
+              <tbody id="st-status-tbody"><tr><td colspan="3" class="empty"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+          <div class="table-wrap">
+            <div class="table-header"><h2>Zgłoszenia wg kategorii</h2></div>
+            <table>
+              <thead><tr><th>Kategoria</th><th>Liczba</th></tr></thead>
+              <tbody id="st-kat-tbody"><tr><td colspan="2" class="empty"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="kpi" style="max-width:320px">
+          <div class="label">Średni czas realizacji</div>
+          <div class="value" id="st-avg" style="color:var(--accent2)">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">godziny — od zgłoszenia do zamknięcia</div>
+        </div>
+      </div>
+
+      <!-- ─── UŻYTKOWNICY (tylko admin) ─────────────────────── -->
       <div class="view" id="view-uzytkownicy">
         <div class="table-wrap">
           <div class="table-header">
@@ -322,9 +442,9 @@
         </div>
       </div>
 
-    </div>
+    </div><!-- /content -->
   </main>
-</div>
+</div><!-- /app -->
 
 <!-- Modal zmiana statusu -->
 <div class="overlay" id="modal-status">
@@ -357,6 +477,7 @@
 <script>
 const API = 'http://localhost:8080/api';
 let zgloszenia  = [];
+let kategorie   = [];
 let currentView = 'dashboard';
 let currentUser = null;
 
@@ -382,7 +503,11 @@ async function apiFetch(url, opts = {}) {
   });
   const text = await r.text();
   if (r.status === 401) { showLogin(); return null; }
-  if (!r.ok) throw new Error(text || r.statusText);
+  if (!r.ok) {
+    let msg = text;
+    try { msg = JSON.parse(text).error || text; } catch(e) {}
+    throw new Error(msg || r.statusText);
+  }
   return text ? JSON.parse(text) : null;
 }
 
@@ -404,11 +529,11 @@ function showLogin() {
 function showApp() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').style.display = 'flex';
-  document.getElementById('user-name').textContent = currentUser.imie + ' ' + currentUser.nazwisko;
+  document.getElementById('user-name').textContent  = currentUser.imie + ' ' + currentUser.nazwisko;
   document.getElementById('user-login-text').textContent = '@' + currentUser.login;
   const rb = document.getElementById('user-role-badge');
   rb.textContent = currentUser.rola;
-  rb.className = 'role-badge role-' + currentUser.rola;
+  rb.className   = 'role-badge role-' + currentUser.rola;
   if (currentUser.rola === 'ADMINISTRATOR') {
     document.getElementById('nav-admin').classList.add('visible');
   }
@@ -417,6 +542,7 @@ function showApp() {
   loadTechnicyDropdown();
 }
 
+// ── Login ─────────────────────────────────────────────────────
 async function doLogin() {
   const login = document.getElementById('l-login').value.trim();
   const haslo = document.getElementById('l-haslo').value;
@@ -425,8 +551,7 @@ async function doLogin() {
   if (!login || !haslo) { errEl.textContent = 'Podaj login i hasło'; errEl.style.display = 'block'; return; }
   try {
     const r = await fetch(API + '/auth/login', {
-      method: 'POST',
-      credentials: 'include',
+      method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({login, haslo})
     });
@@ -445,6 +570,53 @@ async function doLogout() {
   showLogin();
 }
 
+// ── Rejestracja ───────────────────────────────────────────────
+function toggleRejestracja(e) {
+  if (e) e.preventDefault();
+  const loginBlock = document.getElementById('login-form-block');
+  const regBlock   = document.getElementById('reg-form-block');
+  const box        = document.getElementById('login-box');
+  const showReg    = regBlock.style.display === 'none';
+  loginBlock.style.display = showReg ? 'none' : 'block';
+  regBlock.style.display   = showReg ? 'block' : 'none';
+  box.classList.toggle('wide', showReg);
+  document.getElementById('reg-error').style.display = 'none';
+}
+
+async function doRejestracja() {
+  const imie     = document.getElementById('r-imie').value.trim();
+  const nazwisko = document.getElementById('r-nazwisko').value.trim();
+  const login    = document.getElementById('r-login').value.trim();
+  const email    = document.getElementById('r-email').value.trim();
+  const haslo    = document.getElementById('r-haslo').value;
+  const haslo2   = document.getElementById('r-haslo2').value;
+  const telefon  = document.getElementById('r-telefon').value.trim();
+  const errEl    = document.getElementById('reg-error');
+  errEl.style.display = 'none';
+
+  if (!imie || !nazwisko || !login || !email || !haslo)
+    { errEl.textContent = 'Wypełnij wszystkie wymagane pola'; errEl.style.display = 'block'; return; }
+  if (haslo.length < 6)
+    { errEl.textContent = 'Hasło musi mieć co najmniej 6 znaków'; errEl.style.display = 'block'; return; }
+  if (haslo !== haslo2)
+    { errEl.textContent = 'Hasła nie są identyczne'; errEl.style.display = 'block'; return; }
+
+  try {
+    const r = await fetch(API + '/auth/rejestracja', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({login, email, imie, nazwisko, haslo, telefon: telefon || null})
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error || 'Błąd rejestracji'; errEl.style.display = 'block'; return; }
+    toast('Konto utworzone! Teraz możesz się zalogować.', 'ok');
+    // Wróć do logowania i wstaw login
+    toggleRejestracja(null);
+    document.getElementById('l-login').value = login;
+    document.getElementById('l-haslo').focus();
+  } catch(e) { errEl.textContent = 'Błąd: ' + e.message; errEl.style.display = 'block'; }
+}
+
 // ── Nawigacja ────────────────────────────────────────────────
 function switchView(view, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -454,7 +626,8 @@ function switchView(view, el) {
   currentView = view;
   const tytuly = {
     dashboard:'Dashboard', zgloszenia:'Wszystkie zgłoszenia', nowe:'Nowe zgłoszenie',
-    kolejka:'Kolejka priorytetowa', przypisania:'Przypisania techników', uzytkownicy:'Zarządzanie użytkownikami'
+    kolejka:'Kolejka priorytetowa', przypisania:'Przypisania techników',
+    statystyki:'Statystyki i raporty', uzytkownicy:'Zarządzanie użytkownikami'
   };
   document.getElementById('topbar-title').textContent = tytuly[view] || view;
   odswiezWidok();
@@ -462,9 +635,10 @@ function switchView(view, el) {
 
 function odswiezWidok() {
   if (currentView === 'dashboard')    loadDashboard();
-  if (currentView === 'zgloszenia')   loadZgloszenia();
+  if (currentView === 'zgloszenia')   szukajZgloszenia();
   if (currentView === 'kolejka')      loadKolejka();
   if (currentView === 'nowe')         loadKategorie();
+  if (currentView === 'statystyki')   loadStatystyki();
   if (currentView === 'uzytkownicy')  loadUzytkownicy();
 }
 
@@ -483,7 +657,8 @@ async function loadDashboard() {
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Brak aktywnych zgłoszeń</td></tr>'; return; }
     tbody.innerHTML = data.slice(0,10).map(z => `<tr>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
-      <td>${z.tytul}</td><td style="color:var(--muted)">${z.kategoria}</td>
+      <td>${esc(z.tytul)}</td>
+      <td style="color:var(--muted)">${esc(z.kategoria)}</td>
       <td>${priorBadge(z.efektywnyPriorytet)}</td>
       <td><span class="badge badge-${z.status}">${z.status}</span></td>
       <td><span class="pilnosc-${z.pilnosc}">${z.pilnosc}</span></td>
@@ -491,23 +666,46 @@ async function loadDashboard() {
   } catch(e) { toast('Błąd ładowania: ' + e.message, 'error'); }
 }
 
-// ── Lista zgłoszeń ───────────────────────────────────────────
-async function loadZgloszenia() {
-  try { zgloszenia = await apiFetch('/zgloszenia'); if(zgloszenia) renderZgloszenia(); }
-  catch(e) { toast('Błąd: ' + e.message, 'error'); }
+// ── Zgłoszenia z filtrowaniem server-side ────────────────────
+async function szukajZgloszenia() {
+  const params = new URLSearchParams();
+  const szukaj = document.getElementById('filter-szukaj').value.trim();
+  const status = document.getElementById('filter-status').value;
+  const kat    = document.getElementById('filter-kategoria').value;
+  const od     = document.getElementById('filter-od').value;
+  const dataDo = document.getElementById('filter-do').value;
+  if (szukaj) params.set('szukaj', szukaj);
+  if (status) params.set('status', status);
+  if (kat)    params.set('idKategorii', kat);
+  if (od)     params.set('od', od);
+  if (dataDo) params.set('dataDo', dataDo);
+  const qs = params.toString();
+  try {
+    const data = await apiFetch('/zgloszenia' + (qs ? '?' + qs : ''));
+    if (data === null) return;
+    zgloszenia = data;
+    renderZgloszenia();
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+function resetFiltrow() {
+  ['filter-szukaj','filter-od','filter-do'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filter-status').value    = '';
+  document.getElementById('filter-kategoria').value = '';
+  szukajZgloszenia();
 }
 
 function renderZgloszenia() {
-  const filter = document.getElementById('filter-status').value;
-  const data   = filter ? zgloszenia.filter(z => z.status === filter) : zgloszenia;
-  const tbody  = document.getElementById('zgl-tbody');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Brak wyników</td></tr>'; return; }
-  tbody.innerHTML = data.map(z => `<tr>
+  const tbody = document.getElementById('zgl-tbody');
+  if (!zgloszenia.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Brak wyników</td></tr>'; return; }
+  tbody.innerHTML = zgloszenia.map(z => `<tr>
     <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
-    <td>${z.tytul}</td><td style="color:var(--muted)">${z.kategoria}</td>
-    <td style="color:var(--muted)">${z.zglaszajacy}</td>
+    <td>${esc(z.tytul)}</td>
+    <td style="color:var(--muted)">${esc(z.kategoria)}</td>
+    <td style="color:var(--muted)">${esc(z.zglaszajacy)}</td>
     <td>${priorBadge(z.efektywnyPriorytet)}</td>
     <td><span class="badge badge-${z.status}">${z.status}</span></td>
+    <td style="font-size:11px;color:var(--muted)">${fmtDate(z.utworzono)}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="openModalStatus(${z.id})">Status</button></td>
   </tr>`).join('');
 }
@@ -515,7 +713,7 @@ function renderZgloszenia() {
 // ── Kolejka ──────────────────────────────────────────────────
 async function loadKolejka() {
   try {
-    const data   = await apiFetch('/zgloszenia');
+    const data = await apiFetch('/zgloszenia');
     if (!data) return;
     const sorted = [...data].sort((a,b) => a.efektywnyPriorytet - b.efektywnyPriorytet);
     const tbody  = document.getElementById('kol-tbody');
@@ -523,27 +721,34 @@ async function loadKolejka() {
     tbody.innerHTML = sorted.map((z,i) => `<tr>
       <td style="font-family:var(--mono);color:var(--muted)">${i+1}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
-      <td>${z.tytul}</td><td style="color:var(--muted)">${z.kategoria}</td>
+      <td>${esc(z.tytul)}</td>
+      <td style="color:var(--muted)">${esc(z.kategoria)}</td>
       <td>${priorBadge(z.efektywnyPriorytet)}</td>
       <td><span class="pilnosc-${z.pilnosc}">${z.pilnosc}</span></td>
-      <td style="color:var(--muted);font-size:12px">${z.terminRealizacji ? new Date(z.terminRealizacji).toLocaleString('pl') : '—'}</td>
+      <td style="color:var(--muted);font-size:12px">${fmtDate(z.terminRealizacji)}</td>
       <td><span class="badge badge-${z.status}">${z.status}</span></td>
     </tr>`).join('');
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
 
-// ── Kategorie ────────────────────────────────────────────────
+// ── Kategorie ─────────────────────────────────────────────────
 async function loadKategorie() {
   try {
     const data = await apiFetch('/kategorie');
     if (!data) return;
-    const sel = document.getElementById('n-kategoria');
-    if (!data.length) { sel.innerHTML = '<option value="">Brak kategorii w bazie</option>'; return; }
-    sel.innerHTML = data.map(k => `<option value="${k.id}">${k.nazwa}</option>`).join('');
+    kategorie = data;
+    // formularz nowego zgłoszenia
+    const selN = document.getElementById('n-kategoria');
+    if (!data.length) { selN.innerHTML = '<option value="">Brak kategorii w bazie</option>'; return; }
+    selN.innerHTML = data.map(k => `<option value="${k.id}">${k.nazwa}</option>`).join('');
+    // filtr w liście zgłoszeń
+    const selF = document.getElementById('filter-kategoria');
+    selF.innerHTML = '<option value="">Wszystkie kategorie</option>' +
+      data.map(k => `<option value="${k.id}">${k.nazwa}</option>`).join('');
   } catch(e) { toast('Błąd ładowania kategorii: ' + e.message, 'error'); }
 }
 
-// ── Nowe zgłoszenie ──────────────────────────────────────────
+// ── Nowe zgłoszenie ───────────────────────────────────────────
 async function utworzZgloszenie() {
   const tytul = document.getElementById('n-tytul').value.trim();
   const idKat = document.getElementById('n-kategoria').value;
@@ -553,7 +758,7 @@ async function utworzZgloszenie() {
   const terminGodz = document.getElementById('n-termin-godz').value;
   const termin     = terminData ? terminData + 'T' + terminGodz + ':00' : null;
   const body = {
-    idKategorii: parseInt(idKat),
+    idKategorii:      parseInt(idKat),
     tytul,
     opis:             document.getElementById('n-opis').value,
     pilnosc:          document.getElementById('n-pilnosc').value,
@@ -561,7 +766,7 @@ async function utworzZgloszenie() {
     terminRealizacji: termin,
   };
   try {
-    const wynik = await apiFetch('/zgloszenia', { method: 'POST', body: JSON.stringify(body) });
+    const wynik = await apiFetch('/zgloszenia', { method:'POST', body:JSON.stringify(body) });
     if (wynik) { toast('Zgłoszenie ' + wynik.numerZgloszenia + ' zostało utworzone', 'ok'); resetForm(); }
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
@@ -572,18 +777,18 @@ function resetForm() {
   document.getElementById('n-termin-godz').value = '08:00';
 }
 
-// ── Dropdowny techników ──────────────────────────────────────
+// ── Dropdowny techników ───────────────────────────────────────
 async function loadTechnicyDropdown() {
   try {
     const data = await apiFetch('/uzytkownicy/technicy');
     if (!data) return;
     const opts = data.map(t => `<option value="${t.id}">${t.imie} ${t.nazwisko} (@${t.login})</option>`).join('');
-    document.getElementById('p-id-tech').innerHTML  = '<option value="">Wybierz technika…</option>' + opts;
-    document.getElementById('pa-tech').innerHTML    = '<option value="">Wybierz technika…</option>' + opts;
+    document.getElementById('p-id-tech').innerHTML = '<option value="">Wybierz technika…</option>' + opts;
+    document.getElementById('pa-tech').innerHTML   = '<option value="">Wybierz technika…</option>' + opts;
   } catch(e) { /* nie blokuj UI */ }
 }
 
-// ── Przypisania ──────────────────────────────────────────────
+// ── Przypisania ───────────────────────────────────────────────
 async function loadKolejkaTechnika() {
   const id = document.getElementById('p-id-tech').value;
   if (!id) { toast('Wybierz technika', 'warn'); return; }
@@ -594,7 +799,7 @@ async function loadKolejkaTechnika() {
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Brak aktywnych przypisań</td></tr>'; return; }
     tbody.innerHTML = data.map(p => `<tr>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${p.numerZgloszenia}</td>
-      <td>${p.tytul}</td>
+      <td>${esc(p.tytul)}</td>
       <td style="font-size:12px;color:var(--muted)">${fmtDate(p.planowanyStart)}</td>
       <td style="font-size:12px;color:var(--muted)">${fmtDate(p.planowaneZakonczenie)}</td>
       <td><span class="badge badge-${p.status}">${p.status}</span></td>
@@ -616,7 +821,7 @@ async function przypiszTechnika() {
   const start     = startData ? startData + 'T' + startGodz + ':00' : null;
   const body = { idTechnika: parseInt(idTech), planowanyStart: start };
   try {
-    const wynik = await apiFetch(`/przypisania/${idZgl}`, { method: 'POST', body: JSON.stringify(body) });
+    const wynik = await apiFetch(`/przypisania/${idZgl}`, { method:'POST', body:JSON.stringify(body) });
     if (wynik) { toast('Technik przypisany pomyślnie', 'ok'); loadKolejkaTechnika(); }
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
@@ -631,7 +836,7 @@ async function anulujPrzypisanie(id) {
   catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
 
-// ── Modal status ─────────────────────────────────────────────
+// ── Modal status ──────────────────────────────────────────────
 function openModalStatus(id) { document.getElementById('ms-id').value = id; document.getElementById('modal-status').classList.add('open'); }
 function closeModal(id)       { document.getElementById(id).classList.remove('open'); }
 
@@ -641,11 +846,66 @@ async function zapiszStatus() {
   const kom = document.getElementById('ms-kom').value;
   try {
     const r = await apiFetch(`/zgloszenia/${id}/status`, {method:'PUT', body:JSON.stringify({nowyStatus:st, komentarz:kom})});
-    if (r) { toast('Status zaktualizowany', 'ok'); closeModal('modal-status'); loadZgloszenia(); }
+    if (r) { toast('Status zaktualizowany', 'ok'); closeModal('modal-status'); szukajZgloszenia(); }
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
 
-// ── Użytkownicy (admin) ──────────────────────────────────────
+// ── Statystyki ────────────────────────────────────────────────
+async function loadStatystyki() {
+  try {
+    const d = await apiFetch('/statystyki');
+    if (!d) return;
+
+    document.getElementById('st-total').textContent   = d.lacznie   ?? '—';
+    document.getElementById('st-miesiac').textContent = d.tenMiesiac ?? '—';
+    document.getElementById('st-tydzien').textContent = d.tenTydzien ?? '—';
+    document.getElementById('st-dzisiaj').textContent = d.dzisiaj    ?? '—';
+
+    const total = d.lacznie || 1;
+
+    // Rozkład wg statusu
+    const stBody = document.getElementById('st-status-tbody');
+    const entries = Object.entries(d.porStatus || {});
+    if (!entries.length) {
+      stBody.innerHTML = '<tr><td colspan="3" class="empty">Brak danych</td></tr>';
+    } else {
+      stBody.innerHTML = entries
+        .sort((a,b) => b[1]-a[1])
+        .map(([status, count]) => {
+          const pct = Math.round(count / total * 100);
+          return `<tr>
+            <td><span class="badge badge-${status}">${status}</span></td>
+            <td style="font-family:var(--mono)">${count}</td>
+            <td>
+              <div class="prog-wrap">
+                <div class="prog-bg"><div class="prog-fill" style="width:${pct}%"></div></div>
+                <span class="prog-pct">${pct}%</span>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+    }
+
+    // Rozkład wg kategorii
+    const katBody = document.getElementById('st-kat-tbody');
+    if (!d.porKategoria || !d.porKategoria.length) {
+      katBody.innerHTML = '<tr><td colspan="2" class="empty">Brak danych</td></tr>';
+    } else {
+      katBody.innerHTML = d.porKategoria.map(k => `<tr>
+        <td style="font-size:12px">${esc(k.nazwa)}</td>
+        <td style="font-family:var(--mono)">${k.liczba}</td>
+      </tr>`).join('');
+    }
+
+    // Średni czas realizacji
+    const avg = d.srCzasRealizacjiGodz;
+    document.getElementById('st-avg').textContent =
+      avg != null ? Math.round(avg) + ' h' : '—';
+
+  } catch(e) { toast('Błąd ładowania statystyk: ' + e.message, 'error'); }
+}
+
+// ── Użytkownicy (admin) ───────────────────────────────────────
 async function loadUzytkownicy() {
   try {
     const data  = await apiFetch('/uzytkownicy');
@@ -653,15 +913,15 @@ async function loadUzytkownicy() {
     const tbody = document.getElementById('usr-tbody');
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Brak użytkowników</td></tr>'; return; }
     tbody.innerHTML = data.map(u => `<tr>
-      <td style="font-family:var(--mono);font-size:12px">${u.login}</td>
-      <td>${u.imie} ${u.nazwisko}</td>
-      <td style="color:var(--muted);font-size:12px">${u.email}</td>
+      <td style="font-family:var(--mono);font-size:12px">${esc(u.login)}</td>
+      <td>${esc(u.imie)} ${esc(u.nazwisko)}</td>
+      <td style="color:var(--muted);font-size:12px">${esc(u.email)}</td>
       <td><span class="role-badge role-${u.rola}" style="font-size:11px">${u.rola}</span></td>
       <td style="color:${u.aktywny ? 'var(--ok)' : 'var(--danger)'}">${u.aktywny ? '✓' : '✗'}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap">
         ${u.rola !== 'ZGLASZAJACY'   ? `<button class="btn btn-ghost btn-sm" onclick="zmienRole(${u.id},'ZGLASZAJACY')">Zgłaszający</button>` : ''}
         ${u.rola !== 'TECHNIK'       ? `<button class="btn btn-ghost btn-sm" onclick="zmienRole(${u.id},'TECHNIK')">Technik</button>` : ''}
-        ${u.rola !== 'ADMINISTRATOR' ? `<button class="btn btn-warn btn-sm" onclick="zmienRole(${u.id},'ADMINISTRATOR')">Admin</button>` : '<span style="color:var(--muted);font-size:11px">Aktualna rola</span>'}
+        ${u.rola !== 'ADMINISTRATOR' ? `<button class="btn btn-warn btn-sm"  onclick="zmienRole(${u.id},'ADMINISTRATOR')">Admin</button>` : '<span style="color:var(--muted);font-size:11px">Aktualna rola</span>'}
       </td>
     </tr>`).join('');
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
@@ -670,15 +930,11 @@ async function loadUzytkownicy() {
 async function zmienRole(id, rola) {
   try {
     const r = await apiFetch(`/uzytkownicy/${id}/rola`, {method:'PUT', body:JSON.stringify({rola})});
-    if (r) {
-      toast(`Rola zmieniona na ${rola}`, 'ok');
-      loadUzytkownicy();
-      loadTechnicyDropdown();
-    }
+    if (r) { toast(`Rola zmieniona na ${rola}`, 'ok'); loadUzytkownicy(); loadTechnicyDropdown(); }
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────
 function priorBadge(p) {
   const c = p<=20?'var(--danger)':p<=40?'var(--warn)':p<=60?'var(--accent)':'var(--muted)';
   return `<div class="prior-bar"><div class="prior-dot" style="background:${c}"></div><span class="prior-num" style="color:${c}">${p}</span></div>`;
@@ -686,6 +942,10 @@ function priorBadge(p) {
 function fmtDate(dt) {
   if (!dt) return '—';
   return new Date(dt).toLocaleString('pl',{dateStyle:'short',timeStyle:'short'});
+}
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function toast(msg, type='ok') {
   const el = document.createElement('div');
@@ -695,7 +955,7 @@ function toast(msg, type='ok') {
   setTimeout(() => el.remove(), 4000);
 }
 
-// ── Start ────────────────────────────────────────────────────
+// ── Start ─────────────────────────────────────────────────────
 checkAuth();
 </script>
 </body>
