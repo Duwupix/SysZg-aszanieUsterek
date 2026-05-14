@@ -58,6 +58,11 @@ public class SecurityConfig {
                 // Ręczne przypisanie przez admina (POST na /api/przypisania/{id})
                 .requestMatchers(HttpMethod.POST, "/api/przypisania/**").hasRole("ADMINISTRATOR")
 
+                // Zgłoszenia — zmiana statusu tylko dla admina
+                .requestMatchers(HttpMethod.PUT, "/api/zgloszenia/*/status").hasRole("ADMINISTRATOR")
+                // Zgłoszenia — zmiana priorytetu dla admina i technika
+                .requestMatchers(HttpMethod.PUT, "/api/zgloszenia/*/priorytet").hasAnyRole("ADMINISTRATOR", "TECHNIK")
+
                 // Zgłoszenia — technik lub admin może „przyjąć" zgłoszenie
                 .requestMatchers(HttpMethod.POST, "/api/zgloszenia/*/przyjmij").hasAnyRole("TECHNIK", "ADMINISTRATOR")
 

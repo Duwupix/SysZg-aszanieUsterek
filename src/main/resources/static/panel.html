@@ -264,7 +264,7 @@
         </div>
         <div class="table-wrap">
           <div class="table-header">
-            <h2>Najnowsze zgłoszenia</h2>
+            <h2>Najnowsze zgłoszenia <span style="font-size:11px;font-weight:400;color:var(--muted)">(ostatnie 10)</span></h2>
             <span style="font-size:11px;color:var(--muted)" id="last-refresh">—</span>
           </div>
           <table><thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Status</th><th>Pilność</th></tr></thead>
@@ -294,7 +294,7 @@
             <button class="btn btn-ghost btn-sm" onclick="resetFiltrow()">Reset</button>
           </div>
           <table>
-            <thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Zgłaszający</th><th>Priorytet</th><th>Status</th><th>Data</th><th>Akcje</th></tr></thead>
+            <thead><tr id="zgl-thead"><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Zgłaszający</th><th>Priorytet</th><th>Status</th><th>Data</th><th>Akcje</th></tr></thead>
             <tbody id="zgl-tbody"><tr><td colspan="8" class="empty"><div class="spinner"></div></td></tr></tbody>
           </table>
         </div>
@@ -523,6 +523,7 @@ let zgloszenia  = [];
 let kategorie   = [];
 let currentView = 'dashboard';
 let currentUser = null;
+let sortState   = { field: null, dir: 1 };  // pole: 'priorytet' | 'data', dir: 1=rosnąco -1=malejąco
 
 // ── Godziny ──────────────────────────────────────────────────
 function fillHourSelects() {
@@ -710,7 +711,11 @@ async function loadDashboard() {
     document.getElementById('last-refresh').textContent = 'Ostatnia aktualizacja: ' + new Date().toLocaleTimeString('pl');
     const tbody = document.getElementById('dash-tbody');
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Brak aktywnych zgłoszeń</td></tr>'; return; }
-    tbody.innerHTML = data.slice(0,10).map(z => `<tr>
+    // Sortuj wg daty dodania malejąco — najnowsze na górze
+    const ostatnie = [...data]
+      .sort((a, b) => new Date(b.utworzono) - new Date(a.utworzono))
+      .slice(0, 10);
+    tbody.innerHTML = ostatnie.map(z => `<tr>
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
       <td>${esc(z.tytul)}</td>
       <td style="color:var(--muted)">${esc(z.kategoria)}</td>
@@ -750,19 +755,91 @@ function resetFiltrow() {
   szukajZgloszenia();
 }
 
+// ── Sortowanie ────────────────────────────────────────────────
+function sortBy(field) {
+  sortState.dir = sortState.field === field ? sortState.dir * -1 : 1;
+  sortState.field = field;
+  renderZgloszenia();
+}
+
+function sortArrow(field) {
+  if (sortState.field !== field)
+    return '<span style="opacity:.25;font-size:10px;margin-left:3px">⇅</span>';
+  return sortState.dir === 1
+    ? '<span style="font-size:10px;color:var(--accent);margin-left:3px">▲</span>'
+    : '<span style="font-size:10px;color:var(--accent);margin-left:3px">▼</span>';
+}
+
 function renderZgloszenia() {
+  const isAdmin       = currentUser && currentUser.rola === 'ADMINISTRATOR';
+  const isTechnik     = currentUser && currentUser.rola === 'TECHNIK';
+  const isZglaszajacy = currentUser && currentUser.rola === 'ZGLASZAJACY';
+  const canEditPrior  = isAdmin || isTechnik;
+
+  // Sortowanie
+  let sorted = [...zgloszenia];
+  if (sortState.field === 'priorytet') {
+    sorted.sort((a, b) => (a.efektywnyPriorytet - b.efektywnyPriorytet) * sortState.dir);
+  } else if (sortState.field === 'data') {
+    sorted.sort((a, b) => {
+      const da = a.utworzono ? new Date(a.utworzono) : 0;
+      const db = b.utworzono ? new Date(b.utworzono) : 0;
+      return (da - db) * sortState.dir;
+    });
+  }
+
+  // Nagłówki: klikalne kolumny z trójkątami
+  const thead = document.getElementById('zgl-thead');
+  const thPrior = `<th style="cursor:pointer;user-select:none" onclick="sortBy('priorytet')">Priorytet${sortArrow('priorytet')}</th>`;
+  const thData  = `<th style="cursor:pointer;user-select:none" onclick="sortBy('data')">Data${sortArrow('data')}</th>`;
+  let ths = '<th>Nr</th><th>Tytuł</th><th>Kategoria</th>';
+  if (!isZglaszajacy) ths += '<th>Zgłaszający</th>';
+  ths += thPrior + '<th>Status</th>' + thData;
+  if (isAdmin) ths += '<th>Akcje</th>';
+  thead.innerHTML = ths;
+
+  const cols  = 5 + (isZglaszajacy ? 0 : 1) + (isAdmin ? 1 : 0);
   const tbody = document.getElementById('zgl-tbody');
-  if (!zgloszenia.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Brak wyników</td></tr>'; return; }
-  tbody.innerHTML = zgloszenia.map(z => `<tr>
-    <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
-    <td>${esc(z.tytul)}</td>
-    <td style="color:var(--muted)">${esc(z.kategoria)}</td>
-    <td style="color:var(--muted)">${esc(z.zglaszajacy)}</td>
-    <td>${priorBadge(z.efektywnyPriorytet)}</td>
-    <td><span class="badge badge-${z.status}">${z.status}</span></td>
-    <td style="font-size:11px;color:var(--muted)">${fmtDate(z.utworzono)}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="openModalStatus(${z.id})">Status</button></td>
-  </tr>`).join('');
+  if (!sorted.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">Brak wyników</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map(z => {
+    let r = `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
+      <td>${esc(z.tytul)}</td>
+      <td style="color:var(--muted)">${esc(z.kategoria)}</td>`;
+    if (!isZglaszajacy) r += `<td style="color:var(--muted)">${esc(z.zglaszajacy)}</td>`;
+    // Priorytet: edytowalny dla admina i technika
+    if (canEditPrior) {
+      r += `<td>
+        <span style="display:inline-flex;align-items:center;gap:4px">
+          ${priorBadge(z.efektywnyPriorytet)}
+          <button class="btn btn-ghost btn-sm" style="padding:1px 5px;font-size:11px;line-height:1.4"
+                  onclick="edytujPriorytet(${z.id},${z.efektywnyPriorytet})" title="Zmień priorytet">✎</button>
+        </span></td>`;
+    } else {
+      r += `<td>${priorBadge(z.efektywnyPriorytet)}</td>`;
+    }
+    r += `
+      <td><span class="badge badge-${z.status}">${z.status}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${fmtDate(z.utworzono)}</td>`;
+    if (isAdmin) r += `<td><button class="btn btn-ghost btn-sm" onclick="openModalStatus(${z.id})">Status</button></td>`;
+    r += `</tr>`;
+    return r;
+  }).join('');
+}
+
+// ── Edycja priorytetu (admin i technik) ───────────────────────
+async function edytujPriorytet(id, obecny) {
+  const val = prompt(`Nowy priorytet (1–100)\nObecny: ${obecny}`, obecny);
+  if (val === null) return;
+  const num = parseInt(val);
+  if (isNaN(num) || num < 1 || num > 100) { toast('Priorytet musi być liczbą od 1 do 100', 'warn'); return; }
+  try {
+    const r = await apiFetch(`/zgloszenia/${id}/priorytet?priorytet=${num}`, { method: 'PUT' });
+    if (r) { toast('Priorytet zaktualizowany', 'ok'); szukajZgloszenia(); }
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
 
 // ── Kolejka ──────────────────────────────────────────────────
@@ -822,7 +899,11 @@ async function utworzZgloszenie() {
   };
   try {
     const wynik = await apiFetch('/zgloszenia', { method:'POST', body:JSON.stringify(body) });
-    if (wynik) { toast('Zgłoszenie ' + wynik.numerZgloszenia + ' zostało utworzone', 'ok'); resetForm(); }
+    if (wynik) {
+      toast('Zgłoszenie ' + wynik.numerZgloszenia + ' zostało utworzone', 'ok');
+      resetForm();
+      loadDashboard();   // natychmiastowe odświeżenie dashboardu
+    }
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
 
