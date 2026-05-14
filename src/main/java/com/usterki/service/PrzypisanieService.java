@@ -1,7 +1,9 @@
 package com.usterki.service;
 
-import com.usterki.model.*;
+import com.usterki.model.PrzypisanieTechnika;
 import com.usterki.model.PrzypisanieTechnika.StatusPrzypisania;
+import com.usterki.model.Uzytkownik;
+import com.usterki.model.Zgloszenie;
 import com.usterki.repository.*;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -96,7 +98,16 @@ public class PrzypisanieService {
         p.setStatusPrzypisania(StatusPrzypisania.ZAKONCZONE);
         p.setFaktyczneZakonczenie(LocalDateTime.now());
         p.setNotatka(notatka);
-        return przypisanieRepo.save(p);
+        przypisanieRepo.save(p);
+
+        // Automatyczna zmiana statusu zgłoszenia na ROZWIĄZANE po zakończeniu prac technika.
+        // Administrator może je następnie zamknąć (ZAMKNIETE) lub ponownie otworzyć.
+        Zgloszenie zgl = p.getZgloszenie();
+        zgl.setStatus(Zgloszenie.Status.ROZWIAZANE);
+        zgl.setZamknieto(LocalDateTime.now());
+        zgloszenieRepo.save(zgl);
+
+        return p;
     }
 
     @Transactional

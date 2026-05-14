@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Table(name = "zgloszenia",
     indexes = {
         @Index(name = "idx_status_priorytet", columnList = "status, priorytet_obliczony"),
-        @Index(name = "idx_termin",           columnList = "termin_realizacji")
+        @Index(name = "idx_data_zauwazeniausterki", columnList = "data_zauwazeniausterki")
     })
 public class Zgloszenie {
 
@@ -57,8 +57,9 @@ public class Zgloszenie {
     @Column(length = 300)
     private String adres;
 
-    @Column(name = "termin_realizacji")
-    private LocalDateTime terminRealizacji;
+    /** Data, kiedy zgłaszający zauważył usterkę (może być wcześniejsza niż data zgłoszenia). */
+    @Column(name = "data_zauwazeniausterki")
+    private LocalDateTime dataZauwazeniaUsterki;
 
     @Column
     private LocalDateTime zamknieto;
@@ -116,8 +117,8 @@ public class Zgloszenie {
     public String getAdres() { return adres; }
     public void setAdres(String adres) { this.adres = adres; }
 
-    public LocalDateTime getTerminRealizacji() { return terminRealizacji; }
-    public void setTerminRealizacji(LocalDateTime terminRealizacji) { this.terminRealizacji = terminRealizacji; }
+    public LocalDateTime getDataZauwazeniaUsterki() { return dataZauwazeniaUsterki; }
+    public void setDataZauwazeniaUsterki(LocalDateTime dataZauwazeniaUsterki) { this.dataZauwazeniaUsterki = dataZauwazeniaUsterki; }
 
     public LocalDateTime getZamknieto() { return zamknieto; }
     public void setZamknieto(LocalDateTime zamknieto) { this.zamknieto = zamknieto; }

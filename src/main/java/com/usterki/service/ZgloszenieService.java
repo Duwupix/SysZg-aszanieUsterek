@@ -38,7 +38,7 @@ public class ZgloszenieService {
     public Zgloszenie utworz(Long idZglaszajacego, Long idKategorii,
                              String tytul, String opis,
                              Zgloszenie.Pilnosc pilnosc, String adres,
-                             LocalDateTime terminRealizacji) {
+                             LocalDateTime dataZauwazeniaUsterki) {
 
         Uzytkownik zglaszajacy = uzytkownikRepo.findById(idZglaszajacego)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika"));
@@ -53,7 +53,7 @@ public class ZgloszenieService {
         z.setOpis(opis);
         z.setPilnosc(pilnosc);
         z.setAdres(adres);
-        z.setTerminRealizacji(terminRealizacji);
+        z.setDataZauwazeniaUsterki(dataZauwazeniaUsterki);
         z.setStatus(Status.NOWE);
 
         priorytetService.zaktualizujPriorytet(z);
@@ -92,7 +92,7 @@ public class ZgloszenieService {
 
     @Transactional(readOnly = true)
     public List<Zgloszenie> pobierzKolejke() {
-        return zgloszenieRepo.findByStatusNotInOrderByPriorytetObliczonyAscTerminRealizacjiAsc(
+        return zgloszenieRepo.findByStatusNotInOrderByPriorytetObliczonyAscDataZauwazeniaUsterkiAsc(
                 List.of(Status.ZAMKNIETE, Status.ODRZUCONE));
     }
 

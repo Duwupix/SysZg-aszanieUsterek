@@ -11,7 +11,7 @@ public class ZgloszenieDto {
         private String opis;
         private Zgloszenie.Pilnosc pilnosc;
         private String adres;
-        private LocalDateTime terminRealizacji;
+        private LocalDateTime dataZauwazeniaUsterki;
 
         public Long getIdKategorii() { return idKategorii; }
         public void setIdKategorii(Long idKategorii) { this.idKategorii = idKategorii; }
@@ -28,8 +28,8 @@ public class ZgloszenieDto {
         public String getAdres() { return adres; }
         public void setAdres(String adres) { this.adres = adres; }
 
-        public LocalDateTime getTerminRealizacji() { return terminRealizacji; }
-        public void setTerminRealizacji(LocalDateTime terminRealizacji) { this.terminRealizacji = terminRealizacji; }
+        public LocalDateTime getDataZauwazeniaUsterki() { return dataZauwazeniaUsterki; }
+        public void setDataZauwazeniaUsterki(LocalDateTime dataZauwazeniaUsterki) { this.dataZauwazeniaUsterki = dataZauwazeniaUsterki; }
     }
 
     public static class Odpowiedz {
@@ -41,7 +41,7 @@ public class ZgloszenieDto {
         private int efektywnyPriorytet;
         private Zgloszenie.Pilnosc pilnosc;
         private String adres;
-        private LocalDateTime terminRealizacji;
+        private LocalDateTime dataZauwazeniaUsterki;
         private LocalDateTime utworzono;
         private LocalDateTime zamknieto;
         private Long idKategorii;
@@ -50,20 +50,20 @@ public class ZgloszenieDto {
 
         public static Odpowiedz z(Zgloszenie z) {
             Odpowiedz o = new Odpowiedz();
-            o.id                 = z.getId();
-            o.numerZgloszenia    = z.getNumerZgloszenia();
-            o.tytul              = z.getTytul();
-            o.opis               = z.getOpis();
-            o.status             = z.getStatus();
-            o.efektywnyPriorytet = z.efektywnyPriorytet();
-            o.pilnosc            = z.getPilnosc();
-            o.adres              = z.getAdres();
-            o.terminRealizacji   = z.getTerminRealizacji();
-            o.utworzono          = z.getUtworzono();
-            o.zamknieto          = z.getZamknieto();
-            o.idKategorii        = z.getKategoria().getId();
-            o.kategoria          = z.getKategoria().getNazwa();
-            o.zglaszajacy        = z.getZglaszajacy().pelneNazwisko();
+            o.id                      = z.getId();
+            o.numerZgloszenia         = z.getNumerZgloszenia();
+            o.tytul                   = z.getTytul();
+            o.opis                    = z.getOpis();
+            o.status                  = z.getStatus();
+            o.efektywnyPriorytet      = z.efektywnyPriorytet();
+            o.pilnosc                 = z.getPilnosc();
+            o.adres                   = z.getAdres();
+            o.dataZauwazeniaUsterki   = z.getDataZauwazeniaUsterki();
+            o.utworzono               = z.getUtworzono();
+            o.zamknieto               = z.getZamknieto();
+            o.idKategorii             = z.getKategoria().getId();
+            o.kategoria               = z.getKategoria().getNazwa();
+            o.zglaszajacy             = z.getZglaszajacy().pelneNazwisko();
             return o;
         }
 
@@ -75,7 +75,7 @@ public class ZgloszenieDto {
         public int getEfektywnyPriorytet() { return efektywnyPriorytet; }
         public Zgloszenie.Pilnosc getPilnosc() { return pilnosc; }
         public String getAdres() { return adres; }
-        public LocalDateTime getTerminRealizacji() { return terminRealizacji; }
+        public LocalDateTime getDataZauwazeniaUsterki() { return dataZauwazeniaUsterki; }
         public LocalDateTime getUtworzono() { return utworzono; }
         public LocalDateTime getZamknieto() { return zamknieto; }
         public Long getIdKategorii() { return idKategorii; }

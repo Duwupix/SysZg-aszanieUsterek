@@ -1,8 +1,11 @@
 package com.usterki.controller;
 
+import com.usterki.dto.PrzypisanieDto;
 import com.usterki.dto.ZgloszenieDto;
+import com.usterki.model.PrzypisanieTechnika;
 import com.usterki.model.Uzytkownik;
 import com.usterki.model.Zgloszenie;
+import com.usterki.service.PrzypisanieService;
 import com.usterki.service.UzytkownikService;
 import com.usterki.service.ZgloszenieService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,11 +23,14 @@ public class ZgloszenieController {
 
     private final ZgloszenieService zgloszenieService;
     private final UzytkownikService uzytkownikService;
+    private final PrzypisanieService przypisanieService;
 
     public ZgloszenieController(ZgloszenieService zgloszenieService,
-                                 UzytkownikService uzytkownikService) {
-        this.zgloszenieService = zgloszenieService;
-        this.uzytkownikService = uzytkownikService;
+                                 UzytkownikService uzytkownikService,
+                                 PrzypisanieService przypisanieService) {
+        this.zgloszenieService  = zgloszenieService;
+        this.uzytkownikService  = uzytkownikService;
+        this.przypisanieService = przypisanieService;
     }
 
     /**
@@ -79,7 +85,7 @@ public class ZgloszenieController {
         Uzytkownik u = uzytkownikService.pobierzPrzezLogin(authentication.getName());
         Zgloszenie zapisane = zgloszenieService.utworz(
                 u.getId(), dto.getIdKategorii(), dto.getTytul(), dto.getOpis(),
-                dto.getPilnosc(), dto.getAdres(), dto.getTerminRealizacji());
+                dto.getPilnosc(), dto.getAdres(), dto.getDataZauwazeniaUsterki());
         return ResponseEntity.status(HttpStatus.CREATED).body(ZgloszenieDto.Odpowiedz.z(zapisane));
     }
 
@@ -96,6 +102,26 @@ public class ZgloszenieController {
     public ResponseEntity<ZgloszenieDto.Odpowiedz> ustawPriorytet(@PathVariable Long id,
                                                                     @RequestParam Integer priorytet) {
         return ResponseEntity.ok(ZgloszenieDto.Odpowiedz.z(zgloszenieService.ustawPriorytetReczny(id, priorytet)));
+    }
+
+    /**
+     * Technik sam bierze zgłoszenie na siebie (self-assignment).
+     * Dostęp: TECHNIK lub ADMINISTRATOR (zabezpieczone w SecurityConfig).
+     */
+    @PostMapping("/{id}/przyjmij")
+    public ResponseEntity<PrzypisanieDto.Odpowiedz> przyjmij(@PathVariable Long id,
+                                                               Authentication authentication) {
+        Uzytkownik u = uzytkownikService.pobierzPrzezLogin(authentication.getName());
+        PrzypisanieTechnika p = przypisanieService.przypisz(id, u.getId(), u.getId(), null);
+        return ResponseEntity.status(HttpStatus.CREATED).body(PrzypisanieDto.Odpowiedz.z(p));
+    }
+
+    /** Zgłoszenia o statusie NOWE dostępne do przyjęcia przez technika. */
+    @GetMapping("/dostepne")
+    public ResponseEntity<List<ZgloszenieDto.Odpowiedz>> dostepne() {
+        return ResponseEntity.ok(
+                zgloszenieService.filtruj("NOWE", null, null, null, null)
+                        .stream().map(ZgloszenieDto.Odpowiedz::z).toList());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

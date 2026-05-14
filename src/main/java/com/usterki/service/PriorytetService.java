@@ -18,7 +18,7 @@ public class PriorytetService {
         double priorytet = kat.getDomyslnyPriorytet()
                          * kat.getWspolczynnikWagi().doubleValue()
                          * mnoznikPilnosci(z.getPilnosc())
-                         * mnoznikZwloki(z.getTerminRealizacji());
+                         * mnoznikZwloki(z.getDataZauwazeniaUsterki());
         return clamp((int) Math.round(priorytet));
     }
 
@@ -35,9 +35,13 @@ public class PriorytetService {
         };
     }
 
-    private double mnoznikZwloki(LocalDateTime termin) {
-        if (termin == null || !termin.isBefore(LocalDateTime.now())) return 1.0;
-        long godziny = ChronoUnit.HOURS.between(termin, LocalDateTime.now());
+    /**
+     * Im starsza data zauważenia usterki, tym niższy mnożnik (= wyższy priorytet w kolejce).
+     * Podłoga 0.50 — usterka nie może mieć priorytetu mniejszego niż połowa bazowego.
+     */
+    private double mnoznikZwloki(LocalDateTime dataZauważenia) {
+        if (dataZauważenia == null || !dataZauważenia.isBefore(LocalDateTime.now())) return 1.0;
+        long godziny = ChronoUnit.HOURS.between(dataZauważenia, LocalDateTime.now());
         return Math.max(0.5, 1.0 - (godziny / 24.0) * 0.05);
     }
 

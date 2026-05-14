@@ -123,6 +123,10 @@
   .toast.ok{border-left:3px solid var(--ok)}.toast.error{border-left:3px solid var(--danger)}.toast.warn{border-left:3px solid var(--warn)}
   @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
 
+  /* ── Sekcje widoczne tylko dla wybranej roli ─────────────── */
+  .admin-section{display:none}.admin-section.visible{display:block}
+  .technik-section{display:none}.technik-section.visible{display:block}
+
   /* ── Misc ────────────────────────────────────────────────── */
   .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -151,7 +155,9 @@
         <strong>Konta testowe:</strong><br>
         admin / admin123 — Administrator<br>
         technik1…5 / technik123 — Technik<br>
-        jan.kowalski / user123 — Zgłaszający
+        jan.kowalski, anna.nowak, krzysztof.w,<br>
+        marta.zielinska, pawel.dąbrowski,<br>
+        ewa.kaminska, robert.lewicki — Zgłaszający (hasło: user123)
       </div>
       <div class="field">
         <label>Login</label>
@@ -326,10 +332,11 @@
                 <input type="text" id="n-adres" placeholder="ul. Przykładowa 1, Miasto">
               </div>
               <div class="field">
-                <label>Termin realizacji</label>
-                <input type="date" id="n-termin-data">
+                <label>Data zauważenia usterki</label>
+                <input type="date" id="n-data-zauważenia">
                 <div class="help-text">Godzina:
-                  <select id="n-termin-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select>
+                  <select id="n-data-zauważenia-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select>
+                  <span style="color:var(--muted)">— kiedy zauważono usterkę</span>
                 </div>
               </div>
             </div>
@@ -348,51 +355,87 @@
             <h2>Kolejka zgłoszeń (wg priorytetu)</h2>
             <span style="font-size:11px;color:var(--muted)">Niższy numer = wyższy priorytet</span>
           </div>
-          <table><thead><tr><th>#</th><th>Nr zgłoszenia</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Pilność</th><th>Termin</th><th>Status</th></tr></thead>
+          <table><thead><tr><th>#</th><th>Nr zgłoszenia</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Pilność</th><th>Zauważono</th><th>Status</th></tr></thead>
           <tbody id="kol-tbody"><tr><td colspan="8" class="empty"><div class="spinner"></div></td></tr></tbody></table>
         </div>
       </div>
 
       <!-- ─── PRZYPISANIA ────────────────────────────────────── -->
       <div class="view" id="view-przypisania">
-        <div style="display:flex;gap:16px;margin-bottom:16px;align-items:flex-end">
-          <div class="field" style="min-width:220px">
-            <label>Technik</label>
-            <select id="p-id-tech"><option value="">Wybierz technika…</option></select>
+
+        <!-- == Sekcja technika: dostępne zgłoszenia do przyjęcia == -->
+        <div class="technik-section" id="prz-dostepne-section" style="margin-bottom:16px">
+          <div class="table-wrap">
+            <div class="table-header">
+              <h2>Dostępne zgłoszenia (NOWE)</h2>
+              <button class="btn btn-ghost btn-sm" onclick="loadDostepne()">↻ Odśwież</button>
+            </div>
+            <table>
+              <thead><tr><th>Nr</th><th>Tytuł</th><th>Kategoria</th><th>Priorytet</th><th>Pilność</th><th>Zauważono</th><th>Akcja</th></tr></thead>
+              <tbody id="prz-dostepne-tbody"><tr><td colspan="7" class="empty"><div class="spinner"></div></td></tr></tbody>
+            </table>
           </div>
-          <button class="btn btn-primary" onclick="loadKolejkaTechnika()">Pobierz kolejkę</button>
-        </div>
-        <div class="table-wrap">
-          <div class="table-header"><h2>Aktywne przypisania technika</h2></div>
-          <table><thead><tr><th>Nr zgłoszenia</th><th>Tytuł</th><th>Planowany start</th><th>Planowane zakończenie</th><th>Status</th><th>Akcje</th></tr></thead>
-          <tbody id="prz-tbody"><tr><td colspan="6" class="empty">Wybierz technika i kliknij Pobierz.</td></tr></tbody></table>
         </div>
 
-        <div class="table-wrap" style="margin-top:16px;max-width:520px">
-          <div class="table-header"><h2>Przypisz technika do zgłoszenia</h2></div>
-          <div style="padding:24px">
-            <div class="form-grid">
-              <div class="field">
-                <label>ID zgłoszenia *</label>
-                <input type="number" id="pa-zgl" min="1" placeholder="np. 1">
-              </div>
-              <div class="field">
-                <label>Technik *</label>
-                <select id="pa-tech"><option value="">Wybierz technika…</option></select>
-              </div>
-              <div class="field">
-                <label>Planowany start</label>
-                <input type="date" id="pa-start-data">
-                <div class="help-text">Godzina:
-                  <select id="pa-start-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select>
+        <!-- == Sekcja technika: moje aktywne zlecenia == -->
+        <div class="technik-section" id="prz-moje-section" style="margin-bottom:16px">
+          <div class="table-wrap">
+            <div class="table-header">
+              <h2>Moje aktywne zlecenia</h2>
+              <button class="btn btn-ghost btn-sm" onclick="loadMojeZlecenia()">↻ Odśwież</button>
+            </div>
+            <table>
+              <thead><tr><th>Nr zgłoszenia</th><th>Tytuł</th><th>Planowany start</th><th>Planowane zakończenie</th><th>Status</th><th>Zakończ</th></tr></thead>
+              <tbody id="prz-moje-tbody"><tr><td colspan="6" class="empty"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- == Sekcja admina: kolejka konkretnego technika == -->
+        <div class="admin-section" id="prz-admin-kolejka" style="margin-bottom:16px">
+          <div style="display:flex;gap:16px;margin-bottom:12px;align-items:flex-end">
+            <div class="field" style="min-width:220px">
+              <label>Technik</label>
+              <select id="p-id-tech"><option value="">Wybierz technika…</option></select>
+            </div>
+            <button class="btn btn-primary" onclick="loadKolejkaTechnika()">Pobierz kolejkę</button>
+          </div>
+          <div class="table-wrap">
+            <div class="table-header"><h2>Aktywne przypisania technika</h2></div>
+            <table><thead><tr><th>Nr zgłoszenia</th><th>Tytuł</th><th>Planowany start</th><th>Planowane zakończenie</th><th>Status</th><th>Akcje</th></tr></thead>
+            <tbody id="prz-tbody"><tr><td colspan="6" class="empty">Wybierz technika i kliknij Pobierz.</td></tr></tbody></table>
+          </div>
+        </div>
+
+        <!-- == Sekcja admina: ręczne przypisanie technika == -->
+        <div class="admin-section" id="prz-admin-form">
+          <div class="table-wrap" style="max-width:520px">
+            <div class="table-header"><h2>Przypisz technika do zgłoszenia (admin)</h2></div>
+            <div style="padding:24px">
+              <div class="form-grid">
+                <div class="field">
+                  <label>ID zgłoszenia *</label>
+                  <input type="number" id="pa-zgl" min="1" placeholder="np. 1">
+                </div>
+                <div class="field">
+                  <label>Technik *</label>
+                  <select id="pa-tech"><option value="">Wybierz technika…</option></select>
+                </div>
+                <div class="field">
+                  <label>Planowany start</label>
+                  <input type="date" id="pa-start-data">
+                  <div class="help-text">Godzina:
+                    <select id="pa-start-godz" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 6px;font-size:12px"></select>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style="margin-top:16px">
-              <button class="btn btn-primary" onclick="przypiszTechnika()">Przypisz technika</button>
+              <div style="margin-top:16px">
+                <button class="btn btn-primary" onclick="przypiszTechnika()">Przypisz technika</button>
+              </div>
             </div>
           </div>
         </div>
+
       </div>
 
       <!-- ─── STATYSTYKI ─────────────────────────────────────── -->
@@ -487,9 +530,9 @@ function fillHourSelects() {
     const h = String(i).padStart(2,'0');
     return `<option value="${h}:00">${h}:00</option>`;
   }).join('');
-  document.getElementById('n-termin-godz').innerHTML = opts;
+  document.getElementById('n-data-zauważenia-godz').innerHTML = opts;
   document.getElementById('pa-start-godz').innerHTML = opts;
-  document.getElementById('n-termin-godz').value = '08:00';
+  document.getElementById('n-data-zauważenia-godz').value = '08:00';
   document.getElementById('pa-start-godz').value = '08:00';
 }
 fillHourSelects();
@@ -534,12 +577,23 @@ function showApp() {
   const rb = document.getElementById('user-role-badge');
   rb.textContent = currentUser.rola;
   rb.className   = 'role-badge role-' + currentUser.rola;
-  if (currentUser.rola === 'ADMINISTRATOR') {
-    document.getElementById('nav-admin').classList.add('visible');
-  }
+  const isAdmin   = currentUser.rola === 'ADMINISTRATOR';
+  const isTechnik = currentUser.rola === 'TECHNIK';
+
+  // Nav: Użytkownicy tylko dla admina
+  if (isAdmin) document.getElementById('nav-admin').classList.add('visible');
+
+  // Przypisania: sekcje per rola
+  document.querySelectorAll('.admin-section').forEach(el => {
+    el.classList.toggle('visible', isAdmin);
+  });
+  document.querySelectorAll('.technik-section').forEach(el => {
+    el.classList.toggle('visible', isTechnik || isAdmin);
+  });
+
   loadDashboard();
   loadKategorie();
-  loadTechnicyDropdown();
+  if (isAdmin) loadTechnicyDropdown();
 }
 
 // ── Login ─────────────────────────────────────────────────────
@@ -626,7 +680,7 @@ function switchView(view, el) {
   currentView = view;
   const tytuly = {
     dashboard:'Dashboard', zgloszenia:'Wszystkie zgłoszenia', nowe:'Nowe zgłoszenie',
-    kolejka:'Kolejka priorytetowa', przypisania:'Przypisania techników',
+    kolejka:'Kolejka priorytetowa', przypisania:'Przypisania',
     statystyki:'Statystyki i raporty', uzytkownicy:'Zarządzanie użytkownikami'
   };
   document.getElementById('topbar-title').textContent = tytuly[view] || view;
@@ -638,6 +692,7 @@ function odswiezWidok() {
   if (currentView === 'zgloszenia')   szukajZgloszenia();
   if (currentView === 'kolejka')      loadKolejka();
   if (currentView === 'nowe')         loadKategorie();
+  if (currentView === 'przypisania')  loadWidokPrzypisania();
   if (currentView === 'statystyki')   loadStatystyki();
   if (currentView === 'uzytkownicy')  loadUzytkownicy();
 }
@@ -725,7 +780,7 @@ async function loadKolejka() {
       <td style="color:var(--muted)">${esc(z.kategoria)}</td>
       <td>${priorBadge(z.efektywnyPriorytet)}</td>
       <td><span class="pilnosc-${z.pilnosc}">${z.pilnosc}</span></td>
-      <td style="color:var(--muted);font-size:12px">${fmtDate(z.terminRealizacji)}</td>
+      <td style="color:var(--muted);font-size:12px">${fmtDate(z.dataZauwazeniaUsterki)}</td>
       <td><span class="badge badge-${z.status}">${z.status}</span></td>
     </tr>`).join('');
   } catch(e) { toast('Błąd: ' + e.message, 'error'); }
@@ -754,16 +809,16 @@ async function utworzZgloszenie() {
   const idKat = document.getElementById('n-kategoria').value;
   if (!tytul)  { toast('Podaj tytuł zgłoszenia', 'warn'); return; }
   if (!idKat)  { toast('Wybierz kategorię', 'warn'); return; }
-  const terminData = document.getElementById('n-termin-data').value;
-  const terminGodz = document.getElementById('n-termin-godz').value;
-  const termin     = terminData ? terminData + 'T' + terminGodz + ':00' : null;
+  const zauwazenieData = document.getElementById('n-data-zauważenia').value;
+  const zauwazenieGodz = document.getElementById('n-data-zauważenia-godz').value;
+  const dataZauważenia = zauwazenieData ? zauwazenieData + 'T' + zauwazenieGodz + ':00' : null;
   const body = {
-    idKategorii:      parseInt(idKat),
+    idKategorii:             parseInt(idKat),
     tytul,
-    opis:             document.getElementById('n-opis').value,
-    pilnosc:          document.getElementById('n-pilnosc').value,
-    adres:            document.getElementById('n-adres').value,
-    terminRealizacji: termin,
+    opis:                    document.getElementById('n-opis').value,
+    pilnosc:                 document.getElementById('n-pilnosc').value,
+    adres:                   document.getElementById('n-adres').value,
+    dataZauwazeniaUsterki:   dataZauważenia,
   };
   try {
     const wynik = await apiFetch('/zgloszenia', { method:'POST', body:JSON.stringify(body) });
@@ -772,9 +827,9 @@ async function utworzZgloszenie() {
 }
 
 function resetForm() {
-  ['n-tytul','n-opis','n-adres','n-termin-data'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('n-pilnosc').value     = 'SREDNIA';
-  document.getElementById('n-termin-godz').value = '08:00';
+  ['n-tytul','n-opis','n-adres','n-data-zauważenia'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('n-pilnosc').value               = 'SREDNIA';
+  document.getElementById('n-data-zauważenia-godz').value  = '08:00';
 }
 
 // ── Dropdowny techników ───────────────────────────────────────
@@ -834,6 +889,86 @@ async function zakonczPrzypisanie(id) {
 async function anulujPrzypisanie(id) {
   try { const r = await apiFetch(`/przypisania/${id}/anuluj`,{method:'PUT'}); if(r) { toast('Przypisanie anulowane','warn'); loadKolejkaTechnika(); } }
   catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+// ── Widok przypisania — ładuje odpowiednie sekcje per rola ───
+function loadWidokPrzypisania() {
+  const isAdmin   = currentUser && currentUser.rola === 'ADMINISTRATOR';
+  const isTechnik = currentUser && currentUser.rola === 'TECHNIK';
+  if (isTechnik || isAdmin) {
+    loadDostepne();
+    loadMojeZlecenia();
+  }
+}
+
+// ── Dostępne zgłoszenia (NOWE) dla technika ───────────────────
+async function loadDostepne() {
+  try {
+    const data  = await apiFetch('/zgloszenia/dostepne');
+    if (!data) return;
+    const tbody = document.getElementById('prz-dostepne-tbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">Brak nowych zgłoszeń</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(z => `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${z.numerZgloszenia}</td>
+      <td>${esc(z.tytul)}</td>
+      <td style="color:var(--muted)">${esc(z.kategoria)}</td>
+      <td>${priorBadge(z.efektywnyPriorytet)}</td>
+      <td><span class="pilnosc-${z.pilnosc}">${z.pilnosc}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(z.dataZauwazeniaUsterki)}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="przyjmijZgloszenie(${z.id})">Przyjmij</button></td>
+    </tr>`).join('');
+  } catch(e) { toast('Błąd ładowania dostępnych zgłoszeń: ' + e.message, 'error'); }
+}
+
+// ── Moje aktywne zlecenia ─────────────────────────────────────
+async function loadMojeZlecenia() {
+  if (!currentUser) return;
+  try {
+    const data  = await apiFetch(`/przypisania/technik/${currentUser.id}`);
+    if (!data) return;
+    const tbody = document.getElementById('prz-moje-tbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Brak aktywnych zleceń</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(p => `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(p.numerZgloszenia)}</td>
+      <td>${esc(p.tytul)}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(p.planowanyStart)}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtDate(p.planowaneZakonczenie)}</td>
+      <td><span class="badge badge-${p.status}">${p.status}</span></td>
+      <td>
+        <button class="btn btn-ok btn-sm" onclick="zakonczMojeZlecenie(${p.id})">✓ Zakończ</button>
+      </td>
+    </tr>`).join('');
+  } catch(e) { toast('Błąd ładowania zleceń: ' + e.message, 'error'); }
+}
+
+// ── Technik przyjmuje zgłoszenie na siebie ────────────────────
+async function przyjmijZgloszenie(idZgloszenia) {
+  try {
+    const r = await apiFetch(`/zgloszenia/${idZgloszenia}/przyjmij`, { method: 'POST' });
+    if (r) {
+      toast('Zgłoszenie przyjęte — możesz je zobaczyć w sekcji Moje zlecenia', 'ok');
+      loadDostepne();
+      loadMojeZlecenia();
+    }
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
+}
+
+// ── Technik kończy swoje zlecenie ─────────────────────────────
+async function zakonczMojeZlecenie(idPrzypisania) {
+  try {
+    const r = await apiFetch(`/przypisania/${idPrzypisania}/zakoncz`, { method: 'PUT' });
+    if (r) {
+      toast('Zlecenie zakończone — zgłoszenie oznaczono jako Rozwiązane', 'ok');
+      loadMojeZlecenia();
+      loadDostepne();
+    }
+  } catch(e) { toast('Błąd: ' + e.message, 'error'); }
 }
 
 // ── Modal status ──────────────────────────────────────────────

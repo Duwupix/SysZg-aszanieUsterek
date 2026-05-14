@@ -21,7 +21,7 @@ public interface ZgloszenieRepository
     @Query("SELECT z FROM Zgloszenie z WHERE z.id = :id")
     Optional<Zgloszenie> findByIdForUpdate(@Param("id") Long id);
 
-    List<Zgloszenie> findByStatusNotInOrderByPriorytetObliczonyAscTerminRealizacjiAsc(
+    List<Zgloszenie> findByStatusNotInOrderByPriorytetObliczonyAscDataZauwazeniaUsterkiAsc(
             List<Zgloszenie.Status> statusy);
 
     List<Zgloszenie> findByZglaszajacyId(Long idZglaszajacego);
