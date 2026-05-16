@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Testy jednostkowe algorytmu obliczania priorytetu (PriorytetService.oblicz).
- * Nie wymagają kontekstu Spring — testują czystą logikę biznesową.
- */
 class PriorytetServiceTest {
 
     private PriorytetService serwis;
@@ -24,7 +20,7 @@ class PriorytetServiceTest {
         serwis = new PriorytetService();
     }
 
-    // ── Pomocniki budujące obiekty testowe ─────────────────────────────────
+    // Pomocniki budujące obiekty testowe
 
     private KategoriaUsterki kategoria(int domyslnyPriorytet, double wspolczynnikWagi) {
         KategoriaUsterki k = new KategoriaUsterki();
@@ -43,7 +39,7 @@ class PriorytetServiceTest {
         return z;
     }
 
-    // ── Priorytet ręczny ───────────────────────────────────────────────────
+    // Priorytet ręczny
 
     @Test
     @DisplayName("Priorytet ręczny jest zwracany bez przeliczania")
@@ -72,7 +68,7 @@ class PriorytetServiceTest {
         assertThat(serwis.oblicz(z)).isEqualTo(1);
     }
 
-    // ── Mnożniki pilności ──────────────────────────────────────────────────
+    // Mnożniki pilności
 
     @Test
     @DisplayName("Pilność NATYCHMIASTOWA mnoży przez 0.50 — zmniejsza priorytet o połowę")
@@ -110,7 +106,7 @@ class PriorytetServiceTest {
         assertThat(serwis.oblicz(z)).isEqualTo(65);
     }
 
-    // ── Przycinanie wyniku ─────────────────────────────────────────────────
+    // Przycinanie wyniku
 
     @Test
     @DisplayName("Wynik powyżej 100 (wysoki domyślny + duży współczynnik) jest przycinany do 100")
@@ -121,7 +117,7 @@ class PriorytetServiceTest {
         assertThat(serwis.oblicz(z)).isEqualTo(100);
     }
 
-    // ── Mnożnik zwłoki ─────────────────────────────────────────────────────
+    // Mnożnik zwłoki
 
     @Test
     @DisplayName("Brak terminu realizacji → mnożnik zwłoki = 1.0, brak redukcji")
@@ -167,7 +163,7 @@ class PriorytetServiceTest {
         assertThat(serwis.oblicz(z)).isEqualTo(25);
     }
 
-    // ── zaktualizujPriorytet ───────────────────────────────────────────────
+    // zaktualizujPriorytet
 
     @Test
     @DisplayName("zaktualizujPriorytet zapisuje obliczony priorytet do pola priorytetObliczony")

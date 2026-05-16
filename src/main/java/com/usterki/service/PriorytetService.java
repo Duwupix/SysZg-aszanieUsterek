@@ -35,10 +35,6 @@ public class PriorytetService {
         };
     }
 
-    /**
-     * Im starsza data zauważenia usterki, tym niższy mnożnik (= wyższy priorytet w kolejce).
-     * Podłoga 0.50 — usterka nie może mieć priorytetu mniejszego niż połowa bazowego.
-     */
     private double mnoznikZwloki(LocalDateTime dataZauważenia) {
         if (dataZauważenia == null || !dataZauważenia.isBefore(LocalDateTime.now())) return 1.0;
         long godziny = ChronoUnit.HOURS.between(dataZauważenia, LocalDateTime.now());

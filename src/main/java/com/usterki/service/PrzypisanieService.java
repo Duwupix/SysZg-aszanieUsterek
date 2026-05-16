@@ -36,9 +36,7 @@ public class PrzypisanieService {
         this.self            = self;
     }
 
-    /**
-     * Bezpieczne przypisanie z automatycznym retry przy konflikcie wersji.
-     */
+
     public PrzypisanieTechnika przypisz(Long idZgloszenia, Long idTechnika,
                                         Long idPrzypisujacego, LocalDateTime planowanyStart) {
         int proba = 0;

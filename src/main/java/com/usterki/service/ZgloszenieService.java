@@ -142,7 +142,6 @@ public class ZgloszenieService {
         });
     }
 
-    /** Agregaty do widoku statystyk. */
     @Transactional(readOnly = true)
     public Map<String, Object> pobierzStatystyki() {
         Map<String, Object> stats = new LinkedHashMap<>();

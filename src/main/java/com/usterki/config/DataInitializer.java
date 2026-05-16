@@ -20,17 +20,17 @@ public class DataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        // ── Administratorzy ───────────────────────────────────────────────
+        // Administratorzy
         create("admin",           "admin@miasto.pl",          "Admin",     "Systemowy",     "admin123",   Uzytkownik.Rola.ADMINISTRATOR);
 
-        // ── Technicy ──────────────────────────────────────────────────────
+        // Technicy
         create("technik1",        "technik1@miasto.pl",       "Marek",     "Kowalski",      "technik123", Uzytkownik.Rola.TECHNIK);
         create("technik2",        "technik2@miasto.pl",       "Piotr",     "Nowak",         "technik123", Uzytkownik.Rola.TECHNIK);
         create("technik3",        "technik3@miasto.pl",       "Tomasz",    "Wiśniewski",    "technik123", Uzytkownik.Rola.TECHNIK);
         create("technik4",        "technik4@miasto.pl",       "Michał",    "Wójcik",        "technik123", Uzytkownik.Rola.TECHNIK);
         create("technik5",        "technik5@miasto.pl",       "Adam",      "Lewandowski",   "technik123", Uzytkownik.Rola.TECHNIK);
 
-        // ── Zgłaszający ───────────────────────────────────────────────────
+        // Zgłaszający
         create("jan.kowalski",    "jan@example.pl",           "Jan",       "Kowalski",      "user123",    Uzytkownik.Rola.ZGLASZAJACY);
         create("anna.nowak",      "anna.nowak@example.pl",    "Anna",      "Nowak",         "user123",    Uzytkownik.Rola.ZGLASZAJACY);
         create("krzysztof.w",     "krzysztof@example.pl",     "Krzysztof", "Wróblewski",    "user123",    Uzytkownik.Rola.ZGLASZAJACY);

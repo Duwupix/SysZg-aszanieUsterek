@@ -16,11 +16,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Testy jednostkowe ZgloszenieService (Mockito, bez kontekstu Spring).
- * Weryfikują kluczową logikę: tworzenie zgłoszeń, zmianę statusów,
- * zapis historii oraz walidację danych wejściowych.
- */
 @ExtendWith(MockitoExtension.class)
 class ZgloszenieServiceTest {
 
@@ -57,7 +52,7 @@ class ZgloszenieServiceTest {
         kategoria.setSzacCzasGodz(4);
     }
 
-    // ── utworz() ──────────────────────────────────────────────────────────
+    // utworz()
 
     @Test
     @DisplayName("Nowe zgłoszenie otrzymuje status NOWE")
@@ -139,7 +134,7 @@ class ZgloszenieServiceTest {
                 .hasMessageContaining("kategorii");
     }
 
-    // ── zmienStatus() ─────────────────────────────────────────────────────
+    // zmienStatus()
 
     @Test
     @DisplayName("Zmiana statusu na ZAMKNIETE ustawia pole zamknieto")
@@ -214,7 +209,7 @@ class ZgloszenieServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // ── pobierzZgloszeniePoId() ───────────────────────────────────────────
+    // pobierzZgloszeniePoId()
 
     @Test
     @DisplayName("pobierzZgloszeniePoId: istniejące ID zwraca zgłoszenie")
@@ -237,7 +232,7 @@ class ZgloszenieServiceTest {
                 .hasMessageContaining("999");
     }
 
-    // ── Pomocniki ─────────────────────────────────────────────────────────
+    // Pomocniki
 
     /** Konfiguruje mocki dla metody `utworz`. */
     private void stubUtworzZgloszenie() {

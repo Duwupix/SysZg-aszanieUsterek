@@ -1,16 +1,9 @@
--- ============================================================
---  System zgłaszania usterek w mieście
---  Skrypt inicjalizacji bazy danych
---  Uruchom raz w MySQL Workbench lub wierszu poleceń
--- ============================================================
-
 CREATE DATABASE IF NOT EXISTS infrastruktura
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
 USE infrastruktura;
 
--- ── 1. Użytkownicy ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS uzytkownicy (
     id_uzytkownika   BIGINT        NOT NULL AUTO_INCREMENT,
     login            VARCHAR(60)   NOT NULL,
@@ -29,7 +22,6 @@ CREATE TABLE IF NOT EXISTS uzytkownicy (
     UNIQUE KEY uq_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 2. Kategorie usterek ────────────────────────────────────
 CREATE TABLE IF NOT EXISTS kategorie_usterek (
     id_kategorii       BIGINT        NOT NULL AUTO_INCREMENT,
     nazwa              VARCHAR(100)  NOT NULL,
@@ -45,7 +37,6 @@ CREATE TABLE IF NOT EXISTS kategorie_usterek (
         REFERENCES kategorie_usterek (id_kategorii)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 3. Zgłoszenia ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS zgloszenia (
     id_zgloszenia      BIGINT        NOT NULL AUTO_INCREMENT,
     numer_zgloszenia   VARCHAR(20)   NOT NULL,
@@ -75,7 +66,6 @@ CREATE TABLE IF NOT EXISTS zgloszenia (
         REFERENCES kategorie_usterek (id_kategorii)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 4. Przypisania techników ─────────────────────────────────
 CREATE TABLE IF NOT EXISTS przypisania_technikow (
     id_przypisania         BIGINT   NOT NULL AUTO_INCREMENT,
     id_zgloszenia          BIGINT   NOT NULL,
@@ -98,7 +88,6 @@ CREATE TABLE IF NOT EXISTS przypisania_technikow (
         REFERENCES uzytkownicy (id_uzytkownika)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── 5. Historia statusów ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS historia_statusow (
     id_historii   BIGINT      NOT NULL AUTO_INCREMENT,
     id_zgloszenia BIGINT      NOT NULL,
@@ -114,9 +103,6 @@ CREATE TABLE IF NOT EXISTS historia_statusow (
         REFERENCES uzytkownicy (id_uzytkownika)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================================
---  Dane startowe – kategorie usterek
--- ============================================================
 INSERT IGNORE INTO kategorie_usterek
     (nazwa, opis, domyslny_priorytet, szac_czas_godz, wspolczynnik_wagi, aktywna)
 VALUES
@@ -131,24 +117,7 @@ VALUES
     ('Place zabaw',          'Uszkodzone urządzenia, zagrożenia dla dzieci',   25, 6,  1.60, 1),
     ('Inne',                 'Zgłoszenia nieprzypisane do innej kategorii',     55, 8,  1.00, 1);
 
--- ============================================================
---  Użytkownicy są tworzeni automatycznie przez aplikację
---  przy pierwszym uruchomieniu (DataInitializer.java):
---
---  admin        / admin123   → ADMINISTRATOR
---  technik1..5  / technik123 → TECHNIK
---  jan.kowalski, anna.nowak, krzysztof.w,
---  marta.zielinska, pawel.dąbrowski, ewa.kaminska,
---  robert.lewicki              / user123    → ZGLASZAJACY
--- ============================================================
 
--- ============================================================
---  DANE TESTOWE – 30 przykładowych zgłoszeń
---  !! Uruchom tę sekcję DOPIERO po pierwszym starcie aplikacji !!
---  (DataInitializer musi wcześniej wstawić użytkowników)
--- ============================================================
-
--- ── Zmienne pomocnicze: użytkownicy ──────────────────────────
 SET @admin  = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'admin');
 SET @tech1  = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'technik1');
 SET @tech2  = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'technik2');
@@ -364,7 +333,7 @@ VALUES
  'ODRZUCONE', 58, 'NISKA', 52.2560, 21.0020, 'ul. Spokojna 5, Warszawa',
  NULL, NULL, '2026-01-20 12:00:00', '2026-01-22 10:00:00', 1);
 
--- ── Historia statusów ─────────────────────────────────────────
+
 INSERT INTO historia_statusow
   (id_zgloszenia, id_uzytkownika, stary_status, nowy_status, komentarz, zmieniono)
 VALUES
@@ -441,7 +410,6 @@ VALUES
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260120-000030'), @jan,   NULL,   'NOWE',     'Zgłoszenie utworzone',                               '2026-01-20 12:00:00'),
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260120-000030'), @admin, 'NOWE', 'ODRZUCONE','Wniosek inwestycyjny – skierować do Rady Dzielnicy',  '2026-01-22 10:00:00');
 
--- ── Przypisania techników (dla zgłoszeń W_TOKU) ──────────────
 INSERT INTO przypisania_technikow
   (id_zgloszenia, id_technika, id_przypisujacego,
    przypisano, planowany_start, planowane_zakonczenie,
@@ -460,18 +428,12 @@ VALUES
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260325-000014'),
  @tech1, @admin, '2026-03-26 09:00:00', '2026-03-26 10:00:00', '2026-03-26 14:00:00', 'AKTYWNE', 'Wymiana łańcucha huśtawki i przegląd pozostałych', 0);
 
--- ── Podsumowanie (zestaw 1) ───────────────────────────────────
+
 SELECT CONCAT('Zgłoszeń:  ', COUNT(*)) AS wynik FROM zgloszenia;
 SELECT CONCAT('Historii:  ', COUNT(*)) AS wynik FROM historia_statusow;
 SELECT CONCAT('Przypisań: ', COUNT(*)) AS wynik FROM przypisania_technikow;
 
--- ============================================================
---  DANE TESTOWE – 30 zgłoszeń z KIELC
---  !! Uruchom DOPIERO po pierwszym starcie aplikacji !!
---  (nowi użytkownicy muszą być wstawieni przez DataInitializer)
--- ============================================================
 
--- ── Zmienne: nowi zgłaszający (dodani do DataInitializer) ────
 SET @anna    = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'anna.nowak');
 SET @krzys   = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'krzysztof.w');
 SET @marta   = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'marta.zielinska');
@@ -479,7 +441,6 @@ SET @pawel   = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'pawel.dąb
 SET @ewa     = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'ewa.kaminska');
 SET @robert  = (SELECT id_uzytkownika FROM uzytkownicy WHERE login = 'robert.lewicki');
 
--- ── 30 zgłoszeń z Kielc (kolumna data_zauwazeniausterki) ────
 INSERT INTO zgloszenia
   (numer_zgloszenia, id_zglaszajacego, id_kategorii,
    tytul, opis,
@@ -488,7 +449,6 @@ INSERT INTO zgloszenia
    data_zauwazeniausterki, zamknieto,
    utworzono, zaktualizowano, wersja)
 VALUES
--- ── NOWE ×10 ────────────────────────────────────────────────
 ('ZGL-20260501-000031', @anna, @kDrogi,
  'Duża dziura w jezdni przy dworcu PKP',
  'Na ul. Czarnowskiej tuż przy wjeździe na teren dworca PKP widnieje dziura o średnicy ok. 50 cm i głębokości ~8 cm. Stwarza zagrożenie dla samochodów i rowerzystów, szczególnie nocą.',
@@ -549,7 +509,6 @@ VALUES
  'NOWE', 11, 'NATYCHMIASTOWA', 50.8712, 20.6250, 'ul. Złota 15, Kielce',
  '2026-05-07 06:00:00', NULL, '2026-05-10 07:45:00', '2026-05-10 07:45:00', 0),
 
--- ── W_TOKU ×5 ───────────────────────────────────────────────
 ('ZGL-20260415-000041', @ewa, @kDrogi,
  'Wyrwa w asfalcie – al. IX Wieków Kielc przy Galerii Echo',
  'Koło wjazdu do parkingu Galerii Echo na al. IX Wieków Kielc jest podłużna wyrwa w asfalcie (ok. 2 m × 30 cm). Codziennie przejeżdżają tamtędy setki samochodów, ryzyko uszkodzenia opon.',
@@ -580,7 +539,6 @@ VALUES
  'W_TOKU', 33, 'WYSOKA', 50.8762, 20.6508, 'ul. Radomska 34, Kielce',
  '2026-04-15 09:00:00', NULL, '2026-04-19 12:00:00', '2026-04-22 10:00:00', 1),
 
--- ── OCZEKUJE ×4 ─────────────────────────────────────────────
 ('ZGL-20260401-000046', @pawel, @kDrogi,
  'Podmyte pobocze i osuwający się nasyp – ul. Sandomierska',
  'Po wiosennych roztopach przy ul. Sandomierskiej (odcinek 100-120) pobocze podmokło i nasyp zaczął osuwać się w stronę rowu. Konieczna interwencja drogowa przed sezonem letnim.',
@@ -605,7 +563,6 @@ VALUES
  'OCZEKUJE', 55, 'NISKA', 50.8701, 20.6333, 'Planty – aleja główna, Kielce',
  '2026-04-01 09:00:00', NULL, '2026-04-04 10:00:00', '2026-04-14 09:00:00', 2),
 
--- ── ROZWIAZANE ×5 ───────────────────────────────────────────
 ('ZGL-20260301-000050', @krzys, @kDrogi,
  'Uszkodzone bariery energochłonne – ul. Radomska wiadukt',
  'Bariery energochłonne przy wiadukcie na ul. Radomskiej zostały uszkodzone przez pojazd. Segment 6 m jest wygięty i nie spełnia funkcji ochronnej.',
@@ -636,7 +593,6 @@ VALUES
  'ROZWIAZANE', 34, 'WYSOKA', 50.8730, 20.6420, 'ul. Wesoła 5 – kładka nad Silnicą, Kielce',
  '2026-02-22 15:00:00', '2026-03-20 11:00:00', '2026-03-05 09:00:00', '2026-03-20 11:00:00', 2),
 
--- ── ZAMKNIETE ×4 ────────────────────────────────────────────
 ('ZGL-20260201-000055', @anna, @kWoda,
  'Awaria wodociągu – ul. Wesoła, zalanie jezdni',
  'Przerwa w rurociągu DN200 przy ul. Wesoła 12. Woda zalała jezdnię na długości 30 m, tworząc jezioro głębokości 10 cm. Awaria trwała 6 godzin, brak wody w 4 blokach.',
@@ -661,7 +617,7 @@ VALUES
  'ZAMKNIETE', 65, 'NISKA', 50.8625, 20.6280, 'os. Ślichowice 45, Kielce',
  '2026-01-28 11:00:00', '2026-02-25 11:00:00', '2026-02-04 10:00:00', '2026-02-25 11:00:00', 3),
 
--- ── ODRZUCONE ×2 ────────────────────────────────────────────
+
 ('ZGL-20260120-000059', @ewa, @kInne,
  'Prośba o dodanie ławek na Plant – niewystarczająca liczba miejsc siedzących',
  'Zgłaszający prosi o ustawienie dodatkowych ławek na Plantach. Nie jest to usterka infrastruktury – wniosek przekierowano do Wydziału Inwestycji UM Kielce.',
@@ -674,7 +630,6 @@ VALUES
  'ODRZUCONE', 63, 'NISKA', 50.8688, 20.6355, 'rzeka Silnica, Kielce',
  NULL, NULL, '2026-01-25 10:00:00', '2026-01-28 10:00:00', 1);
 
--- ── Historia statusów – Kielce ────────────────────────────────
 INSERT INTO historia_statusow
   (id_zgloszenia, id_uzytkownika, stary_status, nowy_status, komentarz, zmieniono)
 VALUES
@@ -726,7 +681,7 @@ VALUES
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260305-000054'), @robert, NULL,     'NOWE',       'Zgłoszenie utworzone',                  '2026-03-05 09:00:00'),
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260305-000054'), @admin,  'NOWE',   'W_TOKU',     'Zlecono ciesielkę',                    '2026-03-10 09:00:00'),
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260305-000054'), @tech5,  'W_TOKU', 'ROZWIAZANE', 'Deska wymieniona, kładka bezpieczna',  '2026-03-20 11:00:00'),
--- ZAMKNIETE
+
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260201-000055'), @anna,   NULL,        'NOWE',        'Zgłoszenie utworzone',            '2026-02-01 06:00:00'),
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260201-000055'), @admin,  'NOWE',      'W_TOKU',      'MPWiK Kielce skierowane na awarię','2026-02-01 07:00:00'),
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260201-000055'), @tech1,  'W_TOKU',    'ROZWIAZANE',  'Rura wymieniona, woda przywrócona','2026-02-12 14:00:00'),
@@ -749,7 +704,6 @@ VALUES
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260125-000060'), @robert, NULL,   'NOWE',     'Zgłoszenie utworzone',                                '2026-01-25 10:00:00'),
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260125-000060'), @admin,  'NOWE', 'ODRZUCONE','Wniosek inwestycyjny – przekazano do UM Kielce',      '2026-01-28 10:00:00');
 
--- ── Przypisania techników (zgłoszenia W_TOKU z Kielc) ────────
 INSERT INTO przypisania_technikow
   (id_zgloszenia, id_technika, id_przypisujacego,
    przypisano, planowany_start, planowane_zakonczenie,
@@ -766,7 +720,6 @@ VALUES
 ((SELECT id_zgloszenia FROM zgloszenia WHERE numer_zgloszenia='ZGL-20260419-000045'),
  @tech5, @admin, '2026-04-22 10:00:00', '2026-04-22 11:00:00', '2026-04-22 19:00:00', 'AKTYWNE', 'Wymiana uszkodzonych płyt chodnikowych 60×60', 0);
 
--- ── Podsumowanie końcowe ──────────────────────────────────────
 SELECT CONCAT('Łącznie zgłoszeń:  ', COUNT(*)) AS wynik FROM zgloszenia;
 SELECT CONCAT('Łącznie historii:  ', COUNT(*)) AS wynik FROM historia_statusow;
 SELECT CONCAT('Łącznie przypisań: ', COUNT(*)) AS wynik FROM przypisania_technikow;

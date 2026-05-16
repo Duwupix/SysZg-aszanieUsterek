@@ -18,11 +18,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Testy jednostkowe PrzypisanieService (Mockito, bez kontekstu Spring).
- * Weryfikują: walidację duplikatów, brakujące encje, zmianę statusów
- * przypisania oraz obliczanie planowanego czasu zakończenia.
- */
 @ExtendWith(MockitoExtension.class)
 class PrzypisanieServiceTest {
 
@@ -75,7 +70,7 @@ class PrzypisanieServiceTest {
         admin.setRola(Uzytkownik.Rola.ADMINISTRATOR);
     }
 
-    // ── przypiszWTransakcji() — walidacja ─────────────────────────────────
+    // przypiszWTransakcji() — walidacja
 
     @Test
     @DisplayName("Przypisanie: brak zgłoszenia → IllegalArgumentException z ID w komunikacie")
@@ -126,7 +121,7 @@ class PrzypisanieServiceTest {
                 .hasMessageContaining("88");
     }
 
-    // ── przypiszWTransakcji() — skutki uboczne ─────────────────────────────
+    // przypiszWTransakcji() — skutki uboczne
 
     @Test
     @DisplayName("Pomyślne przypisanie zmienia status zgłoszenia na W_TOKU")
@@ -174,7 +169,7 @@ class PrzypisanieServiceTest {
         verify(przypisanieRepo, times(1)).save(any(PrzypisanieTechnika.class));
     }
 
-    // ── zakoncz() ─────────────────────────────────────────────────────────
+    // zakoncz()
 
     @Test
     @DisplayName("zakoncz: ustawia status ZAKONCZONE, faktyczne zakończenie i notatkę")
@@ -209,7 +204,7 @@ class PrzypisanieServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // ── anuluj() ──────────────────────────────────────────────────────────
+    // anuluj()
 
     @Test
     @DisplayName("anuluj: ustawia status ANULOWANE i powód w notatce")
@@ -233,7 +228,7 @@ class PrzypisanieServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // ── Pomocniki ─────────────────────────────────────────────────────────
+    // Pomocniki
 
     private void stubPoprawnePrzypisanie() {
         when(zgloszenieRepo.findByIdForUpdate(10L)).thenReturn(Optional.of(zgloszenie));

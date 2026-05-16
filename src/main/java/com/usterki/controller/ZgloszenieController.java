@@ -33,11 +33,6 @@ public class ZgloszenieController {
         this.przypisanieService = przypisanieService;
     }
 
-    /**
-     * Lista zgłoszeń z opcjonalnym filtrowaniem po stronie serwera.
-     * Bez parametrów: kolejka aktywnych zgłoszeń (bez ZAMKNIETE/ODRZUCONE).
-     * Z parametrami: pełne wyszukiwanie wg statusu, kategorii, tekstu, dat.
-     */
     @GetMapping
     public ResponseEntity<List<ZgloszenieDto.Odpowiedz>> pobierz(
             @RequestParam(required = false) String status,
@@ -55,14 +50,14 @@ public class ZgloszenieController {
         return ResponseEntity.ok(wynik.stream().map(ZgloszenieDto.Odpowiedz::z).toList());
     }
 
-    /** Szczegóły pojedynczego zgłoszenia. */
+    /** Szczegóły pojedynczego zgłoszenia */
     @GetMapping("/{id}")
     public ResponseEntity<ZgloszenieDto.Odpowiedz> pobierzJedno(@PathVariable Long id) {
         return ResponseEntity.ok(ZgloszenieDto.Odpowiedz.z(
                 zgloszenieService.pobierzZgloszeniePoId(id)));
     }
 
-    /** Zgłoszenia zalogowanego użytkownika. */
+    /** Zgłoszenia zalogowanego użytkownika */
     @GetMapping("/moje")
     public ResponseEntity<List<ZgloszenieDto.Odpowiedz>> moje(Authentication authentication) {
         Uzytkownik u = uzytkownikService.pobierzPrzezLogin(authentication.getName());
@@ -104,10 +99,6 @@ public class ZgloszenieController {
         return ResponseEntity.ok(ZgloszenieDto.Odpowiedz.z(zgloszenieService.ustawPriorytetReczny(id, priorytet)));
     }
 
-    /**
-     * Technik sam bierze zgłoszenie na siebie (self-assignment).
-     * Dostęp: TECHNIK lub ADMINISTRATOR (zabezpieczone w SecurityConfig).
-     */
     @PostMapping("/{id}/przyjmij")
     public ResponseEntity<PrzypisanieDto.Odpowiedz> przyjmij(@PathVariable Long id,
                                                                Authentication authentication) {
@@ -116,7 +107,6 @@ public class ZgloszenieController {
         return ResponseEntity.status(HttpStatus.CREATED).body(PrzypisanieDto.Odpowiedz.z(p));
     }
 
-    /** Zgłoszenia o statusie NOWE dostępne do przyjęcia przez technika. */
     @GetMapping("/dostepne")
     public ResponseEntity<List<ZgloszenieDto.Odpowiedz>> dostepne() {
         return ResponseEntity.ok(

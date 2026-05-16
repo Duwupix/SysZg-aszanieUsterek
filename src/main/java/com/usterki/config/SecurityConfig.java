@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/uzytkownicy/technicy").authenticated()
                 .requestMatchers("/api/uzytkownicy/**").hasRole("ADMINISTRATOR")
 
-                // Przypisania — ważna kolejność (bardziej szczegółowe reguły pierwsze)
+                // Przypisania
                 // Technik może zakończyć swoje zlecenie
                 .requestMatchers(HttpMethod.PUT, "/api/przypisania/*/zakoncz").hasAnyRole("TECHNIK", "ADMINISTRATOR")
                 // Anulowanie — tylko administrator
@@ -63,10 +63,9 @@ public class SecurityConfig {
                 // Zgłoszenia — zmiana priorytetu dla admina i technika
                 .requestMatchers(HttpMethod.PUT, "/api/zgloszenia/*/priorytet").hasAnyRole("ADMINISTRATOR", "TECHNIK")
 
-                // Zgłoszenia — technik lub admin może „przyjąć" zgłoszenie
+                // Zgłoszenia — technik lub admin może przyjąć zgłoszenie
                 .requestMatchers(HttpMethod.POST, "/api/zgloszenia/*/przyjmij").hasAnyRole("TECHNIK", "ADMINISTRATOR")
 
-                // Pozostałe żądania wymagają zalogowania
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex

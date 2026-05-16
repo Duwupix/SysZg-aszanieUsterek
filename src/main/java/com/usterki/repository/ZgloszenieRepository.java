@@ -33,17 +33,17 @@ public interface ZgloszenieRepository
         """)
     List<Zgloszenie> findOtwarteDoPrezeliczenia();
 
-    // ── Statystyki ──────────────────────────────────────────────
+    // Statystyki
 
-    /** Liczba zgłoszeń w każdym statusie: [Status, Long] */
+    /** Liczba zgłoszeń w każdym statusie:  */
     @Query("SELECT z.status, COUNT(z) FROM Zgloszenie z GROUP BY z.status")
     List<Object[]> groupByStatus();
 
-    /** Liczba zgłoszeń wg kategorii malejąco: [String nazwa, Long] */
+    /** Liczba zgłoszeń wg kategorii malejąco:  */
     @Query("SELECT z.kategoria.nazwa, COUNT(z) FROM Zgloszenie z GROUP BY z.kategoria.nazwa ORDER BY COUNT(z) DESC")
     List<Object[]> groupByKategoria();
 
-    /** Średni czas realizacji w godzinach (MySQL native) */
+    /** Średni czas realizacji w godzinach  */
     @Query(value = "SELECT AVG(TIMESTAMPDIFF(HOUR, utworzono, zamknieto)) FROM zgloszenia WHERE zamknieto IS NOT NULL",
            nativeQuery = true)
     Double avgCzasRealizacjiGodz();

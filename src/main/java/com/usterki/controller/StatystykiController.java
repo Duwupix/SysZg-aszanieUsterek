@@ -18,20 +18,6 @@ public class StatystykiController {
         this.zgloszenieService = zgloszenieService;
     }
 
-    /**
-     * Zwraca agregaty do widoku statystyk:
-     * <pre>
-     * {
-     *   porStatus:            { "NOWE": 5, "W_TOKU": 3, … },
-     *   porKategoria:         [ { "nazwa": "Drogi", "liczba": 10 }, … ],
-     *   srCzasRealizacjiGodz: 14.5,
-     *   dzisiaj:              3,
-     *   tenTydzien:           15,
-     *   tenMiesiac:           42,
-     *   lacznie:              78
-     * }
-     * </pre>
-     */
     @GetMapping
     public ResponseEntity<Map<String, Object>> statystyki() {
         return ResponseEntity.ok(zgloszenieService.pobierzStatystyki());
