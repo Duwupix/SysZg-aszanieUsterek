@@ -1,6 +1,8 @@
 package com.usterki.service;
 
 import com.usterki.model.*;
+import com.usterki.observer.PublikatorZmianyStatusu;
+import com.usterki.observer.ZdarzenieZmianyStatusu;
 import com.usterki.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,8 +24,8 @@ class ZgloszenieServiceTest {
     @Mock private ZgloszenieRepository zgloszenieRepo;
     @Mock private UzytkownikRepository uzytkownikRepo;
     @Mock private KategoriaUsterkiRepository kategoriaRepo;
-    @Mock private HistoriaStatusowRepository historiaRepo;
     @Mock private PriorytetService priorytetService;
+    @Mock private PublikatorZmianyStatusu publikator;
 
     private ZgloszenieService serwis;
 
@@ -33,7 +35,7 @@ class ZgloszenieServiceTest {
     @BeforeEach
     void setUp() {
         serwis = new ZgloszenieService(
-                zgloszenieRepo, uzytkownikRepo, kategoriaRepo, historiaRepo, priorytetService);
+                zgloszenieRepo, uzytkownikRepo, kategoriaRepo, priorytetService, publikator);
 
         uzytkownik = new Uzytkownik();
         uzytkownik.setId(1L);
@@ -92,13 +94,13 @@ class ZgloszenieServiceTest {
     }
 
     @Test
-    @DisplayName("Tworzenie zgłoszenia wywołuje zapis do historii statusów (stary=null, nowy=NOWE)")
-    void utworz_zapiszWpisWHistoriiStatusow() {
+    @DisplayName("Tworzenie zgłoszenia publikuje zdarzenie zmiany statusu (stary=null, nowy=NOWE)")
+    void utworz_publikujeZdarzenieZmianyStatusu() {
         stubUtworzZgloszenie();
 
         serwis.utworz(1L, 1L, "Test", "Opis", Zgloszenie.Pilnosc.SREDNIA, "Adres", null);
 
-        verify(historiaRepo, times(1)).save(any(HistoriaStatusow.class));
+        verify(publikator, times(1)).publikuj(any(ZdarzenieZmianyStatusu.class));
     }
 
     @Test
@@ -177,14 +179,14 @@ class ZgloszenieServiceTest {
     }
 
     @Test
-    @DisplayName("Zmiana statusu zapisuje wpis w historii")
-    void zmienStatus_zapiszWpisWHistorii() {
+    @DisplayName("Zmiana statusu publikuje zdarzenie do obserwatorów")
+    void zmienStatus_publikujeZdarzenie() {
         Zgloszenie z = noweZgloszenie();
         stubZmienStatus(z);
 
         serwis.zmienStatus(10L, Zgloszenie.Status.W_TOKU, 1L, "start");
 
-        verify(historiaRepo, times(1)).save(any(HistoriaStatusow.class));
+        verify(publikator, times(1)).publikuj(any(ZdarzenieZmianyStatusu.class));
     }
 
     @Test
@@ -240,7 +242,6 @@ class ZgloszenieServiceTest {
         when(kategoriaRepo.findById(1L)).thenReturn(Optional.of(kategoria));
         when(zgloszenieRepo.count()).thenReturn(0L);
         when(zgloszenieRepo.save(any(Zgloszenie.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(historiaRepo.save(any(HistoriaStatusow.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
     /** Buduje zgłoszenie testowe. */
@@ -259,6 +260,5 @@ class ZgloszenieServiceTest {
         when(zgloszenieRepo.findById(10L)).thenReturn(Optional.of(z));
         when(uzytkownikRepo.findById(1L)).thenReturn(Optional.of(uzytkownik));
         when(zgloszenieRepo.save(any(Zgloszenie.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(historiaRepo.save(any(HistoriaStatusow.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 }

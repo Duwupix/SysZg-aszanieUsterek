@@ -1,44 +1,41 @@
 package com.usterki.service;
 
-import com.usterki.model.KategoriaUsterki;
 import com.usterki.model.Zgloszenie;
+import com.usterki.service.priorytet.StrategiaPriorytetu;
+import com.usterki.service.priorytet.WazonaStrategiaPriorytetu;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-
+/**
+ * Kontekst wzorca STRATEGIA. Oblicza priorytet zgłoszenia, delegując właściwy
+ * algorytm do wstrzykniętej {@link StrategiaPriorytetu}. Priorytet ręczny
+ * (jeśli ustawiony) zawsze ma pierwszeństwo nad obliczeniami strategii.
+ */
 @Component
 public class PriorytetService {
+
+    private final StrategiaPriorytetu strategia;
+
+    /** Konstruktor produkcyjny — Spring wstrzykuje strategię oznaczoną {@code @Primary}. */
+    @Autowired
+    public PriorytetService(StrategiaPriorytetu strategia) {
+        this.strategia = strategia;
+    }
+
+    /** Konstruktor domyślny (m.in. dla testów) — używa strategii ważonej. */
+    public PriorytetService() {
+        this(new WazonaStrategiaPriorytetu());
+    }
 
     public int oblicz(Zgloszenie z) {
         if (z.getPriorytetReczny() != null) {
             return clamp(z.getPriorytetReczny());
         }
-        KategoriaUsterki kat = z.getKategoria();
-        double priorytet = kat.getDomyslnyPriorytet()
-                         * kat.getWspolczynnikWagi().doubleValue()
-                         * mnoznikPilnosci(z.getPilnosc())
-                         * mnoznikZwloki(z.getDataZauwazeniaUsterki());
-        return clamp((int) Math.round(priorytet));
+        return strategia.oblicz(z);
     }
 
     public void zaktualizujPriorytet(Zgloszenie z) {
         z.setPriorytetObliczony(oblicz(z));
-    }
-
-    private double mnoznikPilnosci(Zgloszenie.Pilnosc pilnosc) {
-        return switch (pilnosc) {
-            case NATYCHMIASTOWA -> 0.50;
-            case WYSOKA         -> 0.70;
-            case SREDNIA        -> 1.00;
-            case NISKA          -> 1.30;
-        };
-    }
-
-    private double mnoznikZwloki(LocalDateTime dataZauważenia) {
-        if (dataZauważenia == null || !dataZauważenia.isBefore(LocalDateTime.now())) return 1.0;
-        long godziny = ChronoUnit.HOURS.between(dataZauważenia, LocalDateTime.now());
-        return Math.max(0.5, 1.0 - (godziny / 24.0) * 0.05);
     }
 
     private int clamp(int v) { return Math.max(1, Math.min(100, v)); }

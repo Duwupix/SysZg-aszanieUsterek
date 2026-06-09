@@ -2,6 +2,8 @@ package com.usterki.service;
 
 import com.usterki.model.*;
 import com.usterki.model.Zgloszenie.Status;
+import com.usterki.observer.PublikatorZmianyStatusu;
+import com.usterki.observer.ZdarzenieZmianyStatusu;
 import com.usterki.repository.*;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,19 +21,19 @@ public class ZgloszenieService {
     private final ZgloszenieRepository zgloszenieRepo;
     private final UzytkownikRepository uzytkownikRepo;
     private final KategoriaUsterkiRepository kategoriaRepo;
-    private final HistoriaStatusowRepository historiaRepo;
     private final PriorytetService priorytetService;
+    private final PublikatorZmianyStatusu publikator;
 
     public ZgloszenieService(ZgloszenieRepository zgloszenieRepo,
                              UzytkownikRepository uzytkownikRepo,
                              KategoriaUsterkiRepository kategoriaRepo,
-                             HistoriaStatusowRepository historiaRepo,
-                             PriorytetService priorytetService) {
+                             PriorytetService priorytetService,
+                             PublikatorZmianyStatusu publikator) {
         this.zgloszenieRepo  = zgloszenieRepo;
         this.uzytkownikRepo  = uzytkownikRepo;
         this.kategoriaRepo   = kategoriaRepo;
-        this.historiaRepo    = historiaRepo;
         this.priorytetService = priorytetService;
+        this.publikator      = publikator;
     }
 
     @Transactional
@@ -45,20 +47,23 @@ public class ZgloszenieService {
         KategoriaUsterki kategoria = kategoriaRepo.findById(idKategorii)
                 .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono kategorii"));
 
-        Zgloszenie z = new Zgloszenie();
-        z.setNumerZgloszenia(generujNumer());
-        z.setZglaszajacy(zglaszajacy);
-        z.setKategoria(kategoria);
-        z.setTytul(tytul);
-        z.setOpis(opis);
-        z.setPilnosc(pilnosc);
-        z.setAdres(adres);
-        z.setDataZauwazeniaUsterki(dataZauwazeniaUsterki);
-        z.setStatus(Status.NOWE);
+        // Wzorzec Budowniczy — płynne, walidowane składanie encji zgłoszenia.
+        Zgloszenie z = new ZgloszenieBuilder()
+                .numer(generujNumer())
+                .zglaszajacy(zglaszajacy)
+                .kategoria(kategoria)
+                .tytul(tytul)
+                .opis(opis)
+                .pilnosc(pilnosc)
+                .adres(adres)
+                .dataZauwazeniaUsterki(dataZauwazeniaUsterki)
+                .status(Status.NOWE)
+                .build();
 
         priorytetService.zaktualizujPriorytet(z);
         Zgloszenie saved = zgloszenieRepo.save(z);
-        zapiszHistorie(saved, null, Status.NOWE, zglaszajacy, "Zgłoszenie utworzone");
+        // Wzorzec Obserwator — powiadom obserwatorów (m.in. zapis do historii).
+        publikator.publikuj(new ZdarzenieZmianyStatusu(saved, null, Status.NOWE, zglaszajacy, "Zgłoszenie utworzone"));
         return saved;
     }
 
@@ -77,7 +82,8 @@ public class ZgloszenieService {
         }
         priorytetService.zaktualizujPriorytet(z);
         Zgloszenie saved = zgloszenieRepo.save(z);
-        zapiszHistorie(saved, stary, nowyStatus, user, komentarz);
+        // Wzorzec Obserwator — powiadom obserwatorów o zmianie statusu.
+        publikator.publikuj(new ZdarzenieZmianyStatusu(saved, stary, nowyStatus, user, komentarz));
         return saved;
     }
 
@@ -182,17 +188,6 @@ public class ZgloszenieService {
             priorytetService.zaktualizujPriorytet(z);
             zgloszenieRepo.save(z);
         });
-    }
-
-    private void zapiszHistorie(Zgloszenie z, Status stary, Status nowy,
-                                Uzytkownik user, String komentarz) {
-        HistoriaStatusow h = new HistoriaStatusow();
-        h.setZgloszenie(z);
-        h.setUzytkownik(user);
-        h.setStaryStatus(stary);
-        h.setNowyStatus(nowy);
-        h.setKomentarz(komentarz);
-        historiaRepo.save(h);
     }
 
     private String generujNumer() {
